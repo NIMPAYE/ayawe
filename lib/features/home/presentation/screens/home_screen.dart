@@ -53,14 +53,18 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline_rounded,
-                        color: ext.expense, size: 64),
+                    Icon(
+                      Icons.error_outline_rounded,
+                      color: ext.expense,
+                      size: 64,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       mainProvider.error!,
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyLarge
-                          ?.copyWith(color: ext.expense),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: ext.expense,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
@@ -88,19 +92,21 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _BalanceCard(provider: mainProvider),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 16),
+                  const _QuickActions(),
+                  const SizedBox(height: 24),
                   _SectionHeader(
                     title: 'Mes Comptes',
-                    onViewAll: () =>
-                        Navigator.pushNamed(context, '/accounts'),
+                    onViewAll: () => Navigator.pushNamed(context, '/accounts'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 0),
                   _AccountsList(accounts: accountProvider.accounts),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 16),
                   _SectionHeader(title: 'Transactions Récentes'),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   _TransactionsList(
-                      transactions: transactionProvider.transactions),
+                    transactions: transactionProvider.transactions,
+                  ),
                   const SizedBox(height: 28),
                   _SectionHeader(title: 'Mes Objectifs'),
                   const SizedBox(height: 12),
@@ -239,6 +245,92 @@ class _BalanceStat extends StatelessWidget {
   }
 }
 
+// ─────────────── Quick Actions ───────────────
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _QuickActionItem(
+          icon: Icons.add,
+          label: 'Compte',
+          onTap: () => Navigator.pushNamed(context, '/add_account'),
+        ),
+        _QuickActionItem(
+          icon: Icons.swap_horiz_rounded,
+          label: 'Transférer',
+          onTap: () => Navigator.pushNamed(context, '/add_transaction'),
+        ),
+        _QuickActionItem(
+          icon: Icons.arrow_upward_rounded,
+          label: 'Retirer',
+          onTap: () => Navigator.pushNamed(context, '/add_transaction'),
+        ),
+        _QuickActionItem(
+          icon: Icons.arrow_downward_rounded,
+          label: 'Recharger',
+          onTap: () => Navigator.pushNamed(context, '/add_transaction'),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickActionItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDark
+                  ? Colors.white.withAlpha(15)
+                  : theme.colorScheme.onSurface.withAlpha(18),
+            ),
+            child: Icon(
+              icon,
+              color: isDark
+                  ? Colors.white.withAlpha(220)
+                  : theme.colorScheme.onSurface.withAlpha(200),
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withAlpha(180),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─────────────── Section Header ───────────────
 
 class _SectionHeader extends StatelessWidget {
@@ -258,10 +350,7 @@ class _SectionHeader extends StatelessWidget {
         if (onViewAll != null)
           TextButton(
             onPressed: onViewAll,
-            child: Text(
-              'Tout voir',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
+            child: Text('Tout voir', style: GoogleFonts.poppins(fontSize: 13)),
           ),
       ],
     );
@@ -282,11 +371,16 @@ class _AccountsList extends StatelessWidget {
         message: "Aucun compte. Ajoutez votre premier compte !",
       );
     }
-    return Column(
-      children: accounts
-          .take(3)
-          .map((account) => _AccountCard(account: account))
-          .toList(),
+    return SizedBox(
+      height: 140,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        clipBehavior: Clip.none,
+        itemCount: accounts.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) => _AccountCard(account: accounts[index]),
+      ),
     );
   }
 }
@@ -295,57 +389,108 @@ class _AccountCard extends StatelessWidget {
   final Account account;
   const _AccountCard({required this.account});
 
+  static const _typeIcons = {
+    AccountType.CASH: Icons.payments_outlined,
+    AccountType.MOBILE_MONEY: Icons.phone_android_rounded,
+    AccountType.BANK: Icons.account_balance_rounded,
+  };
+
+  static const _typeColors = {
+    AccountType.CASH: Color(0xFF00C48C),
+    AccountType.MOBILE_MONEY: Color(0xFFFFB800),
+    AccountType.BANK: Color(0xFF6C5CE7),
+  };
+
+  static const _typeLabels = {
+    AccountType.CASH: 'Cash',
+    AccountType.MOBILE_MONEY: 'Mobile',
+    AccountType.BANK: 'Banque',
+  };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ext = context.appTheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = _typeColors[account.type] ?? theme.colorScheme.primary;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
+      width: 200,
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: ext.border),
+        color: isDark ? Colors.white.withAlpha(10) : theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          width: 0.1,
+          color: isDark ? Colors.white.withAlpha(15) : ext.border,
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              account.typeDisplay.split(' ')[0],
-              style: const TextStyle(fontSize: 18),
-            ),
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(isDark ? 50 : 30),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _typeIcons[account.type] ?? Icons.wallet,
+                  color: accent,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _typeLabels[account.type] ?? '',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: ext.textTertiary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
+          const Spacer(),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start, 
               children: [
+                Row(
+                  spacing: 4,
+                  children: [
+                    Text(
+                      _formatAmount(account.currentBalance),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                    Text(
+                      account.currencySymbol,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: ext.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 0),
                 Text(
                   account.name,
-                  style: theme.textTheme.titleSmall,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  account.typeDisplay,
-                  style: theme.textTheme.bodySmall,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          Text(
-            '${_formatAmount(account.currentBalance)} ${account.currencySymbol}',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          const SizedBox(height: 8),
+         
         ],
       ),
     );
@@ -368,9 +513,7 @@ class _TransactionsList extends StatelessWidget {
       );
     }
     return Column(
-      children: recent
-          .map((t) => _TransactionCard(transaction: t))
-          .toList(),
+      children: recent.map((t) => _TransactionCard(transaction: t)).toList(),
     );
   }
 }
@@ -472,8 +615,9 @@ class _GoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ext = context.appTheme;
-    final progressColor =
-        goal.isAchieved ? ext.income : theme.colorScheme.primary;
+    final progressColor = goal.isAchieved
+        ? ext.income
+        : theme.colorScheme.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -498,8 +642,10 @@ class _GoalCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: goal.isAchieved
                       ? ext.incomeSurface
