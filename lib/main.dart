@@ -11,6 +11,7 @@ import 'features/transactions/presentation/screens/transactions_screen.dart';
 import 'features/accounts/presentation/screens/add_account_screen.dart';
 import 'features/accounts/presentation/screens/accounts_screen.dart';
 import 'features/goals/presentation/screens/goals_screen.dart';
+import 'features/categories/presentation/screens/categories_screen.dart';
 import 'features/accounts/presentation/providers/account_provider.dart';
 import 'features/transactions/presentation/providers/transaction_provider.dart';
 import 'features/goals/presentation/providers/goal_provider.dart';
@@ -71,6 +72,7 @@ class AyaweApp extends StatelessWidget {
               '/add_account': (context) => const AddAccountScreen(),
               '/accounts': (context) => const AccountsScreen(),
               '/goals': (context) => const GoalsScreen(),
+              '/categories': (context) => const CategoriesScreen(),
             },
           );
         },

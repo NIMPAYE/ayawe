@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/stats/presentation/screens/stats_screen.dart';
 import '../../features/budgets/presentation/screens/budgets_screen.dart';
@@ -36,7 +35,9 @@ class _MainShellState extends State<MainShell> {
         children: _screens,
       ),
       extendBody: true,
-      floatingActionButton: _CenterFAB(onTap: () => _showAddSheet(context)),
+      floatingActionButton: _CenterFAB(
+        onTap: () => Navigator.pushNamed(context, '/add_transaction'),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -85,96 +86,6 @@ class _MainShellState extends State<MainShell> {
     setState(() => _currentIndex = index);
   }
 
-  void _showAddSheet(BuildContext context) {
-    final theme = Theme.of(context);
-    final ext = context.appTheme;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: ext.textTertiary.withAlpha(80),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(
-              'Ajouter',
-              style: theme.textTheme.titleLarge,
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _AddOption(
-                    icon: FontAwesomeIcons.arrowRightArrowLeft,
-                    label: 'Transaction',
-                    color: AppColors.income,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      Navigator.pushNamed(context, '/add_transaction');
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _AddOption(
-                    icon: FontAwesomeIcons.wallet,
-                    label: 'Compte',
-                    color: AppColors.primary,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      Navigator.pushNamed(context, '/add_account');
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _AddOption(
-                    icon: FontAwesomeIcons.tags,
-                    label: 'Catégorie',
-                    color: AppColors.warning,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      // TODO: Navigate to add category
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _AddOption(
-                    icon: FontAwesomeIcons.flag,
-                    label: 'Objectif',
-                    color: AppColors.expense,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      Navigator.pushNamed(context, '/goals');
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ─────────────── Center FAB ───────────────
@@ -269,63 +180,3 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// ─────────────── Add Option Card ───────────────
-
-class _AddOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _AddOption({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(
-            color: color.withAlpha(18),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withAlpha(40)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withAlpha(30),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: FaIcon(icon, color: color, size: 20),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

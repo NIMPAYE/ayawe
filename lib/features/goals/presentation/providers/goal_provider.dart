@@ -15,10 +15,24 @@ class GoalProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  List<Goal> get activeGoals =>
+      _goals.where((g) => !g.isAchieved && !g.isOverdue).toList();
+
+  List<Goal> get achievedGoals =>
+      _goals.where((g) => g.isAchieved).toList();
+
+  List<Goal> get overdueGoals =>
+      _goals.where((g) => g.isOverdue).toList();
+
+  double get totalTarget =>
+      _goals.fold(0.0, (sum, g) => sum + g.targetAmount);
+
+  double get totalSaved =>
+      _goals.fold(0.0, (sum, g) => sum + g.currentAmount);
+
   Future<void> loadGoals() async {
     _setLoading(true);
     _clearError();
-
     try {
       _goals = await _goalRepository.getGoals();
     } catch (e) {
@@ -43,6 +57,15 @@ class GoalProvider extends ChangeNotifier {
       await loadGoals();
     } catch (e) {
       _setError('Error updating goal: $e');
+    }
+  }
+
+  Future<void> deleteGoal(int id) async {
+    try {
+      await _goalRepository.deleteGoal(id);
+      await loadGoals();
+    } catch (e) {
+      _setError('Error deleting goal: $e');
     }
   }
 

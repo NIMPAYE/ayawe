@@ -280,7 +280,7 @@ class _QuickActions extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _QuickActionItem(
-          icon: Icons.add,
+          icon: Icons.add_rounded,
           label: 'Compte',
           onTap: () => Navigator.pushNamed(context, '/add_account'),
         ),
@@ -290,14 +290,14 @@ class _QuickActions extends StatelessWidget {
           onTap: () => Navigator.pushNamed(context, '/add_transaction'),
         ),
         _QuickActionItem(
-          icon: Icons.arrow_upward_rounded,
-          label: 'Retirer',
-          onTap: () => Navigator.pushNamed(context, '/add_transaction'),
+          icon: Icons.category_rounded,
+          label: 'Catégories',
+          onTap: () => Navigator.pushNamed(context, '/categories'),
         ),
         _QuickActionItem(
-          icon: Icons.arrow_downward_rounded,
-          label: 'Recharger',
-          onTap: () => Navigator.pushNamed(context, '/add_transaction'),
+          icon: Icons.flag_rounded,
+          label: 'Objectifs',
+          onTap: () => Navigator.pushNamed(context, '/goals'),
         ),
       ],
     );

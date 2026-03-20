@@ -15,10 +15,15 @@ class CategoryProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  List<Category> get expenseCategories =>
+      _categories.where((c) => c.type == CategoryType.EXPENSE).toList();
+
+  List<Category> get incomeCategories =>
+      _categories.where((c) => c.type == CategoryType.INCOME).toList();
+
   Future<void> loadCategories() async {
     _setLoading(true);
     _clearError();
-
     try {
       _categories = await _categoryRepository.getCategories();
     } catch (e) {
@@ -34,6 +39,33 @@ class CategoryProvider extends ChangeNotifier {
     } catch (e) {
       _setError('Error loading categories by type: $e');
       return [];
+    }
+  }
+
+  Future<void> addCategory(Category category) async {
+    try {
+      await _categoryRepository.createCategory(category);
+      await loadCategories();
+    } catch (e) {
+      _setError('Error adding category: $e');
+    }
+  }
+
+  Future<void> updateCategory(Category category) async {
+    try {
+      await _categoryRepository.updateCategory(category);
+      await loadCategories();
+    } catch (e) {
+      _setError('Error updating category: $e');
+    }
+  }
+
+  Future<void> deleteCategory(int id) async {
+    try {
+      await _categoryRepository.deleteCategory(id);
+      await loadCategories();
+    } catch (e) {
+      _setError('Error deleting category: $e');
     }
   }
 
