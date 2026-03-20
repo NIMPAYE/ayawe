@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../providers/app_provider.dart';
-import '../../features/transactions/domain/entities/transaction.dart';
-import '../../features/categories/domain/entities/category.dart';
-import '../../features/accounts/domain/entities/account.dart';
+import '../providers/transaction_provider.dart';
+import '../../domain/entities/transaction.dart';
+import '../../../categories/domain/entities/category.dart';
+import '../../../accounts/domain/entities/account.dart';
+import '../../../accounts/presentation/providers/account_provider.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -38,7 +39,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     // In a real app, you would load from repositories
     if (mounted) {
       setState(() {
-        _accounts = context.read<AppProvider>().accounts;
+        _accounts = context.read<AccountProvider>().accounts;
         _categories = [
           // Mock categories - in real app, load from repository
           const Category(
@@ -487,7 +488,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       transactionType: _transactionType,
     );
 
-    context.read<AppProvider>().addTransaction(transaction);
+    context.read<TransactionProvider>().addTransaction(transaction);
     Navigator.pop(context);
   }
 }

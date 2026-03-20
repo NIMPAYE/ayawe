@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
-import '../providers/app_provider.dart';
-import '../../features/accounts/domain/entities/account.dart';
-import '../../features/transactions/domain/entities/transaction.dart';
-import '../../features/goals/domain/entities/goal.dart';
+import '../../../../presentation/providers/main_provider.dart';
+import '../../../accounts/domain/entities/account.dart';
+import '../../../transactions/domain/entities/transaction.dart';
+import '../../../goals/domain/entities/goal.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -29,18 +29,29 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
-              context.read<AppProvider>().loadData();
+              context.read<MainProvider>().refreshAll();
             },
           ),
         ],
       ),
-      body: Consumer<AppProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
+      body: Consumer<MainProvider>(
+        builder: (context, mainProvider, child) {
+        
+          final accountProvider = mainProvider.accountProvider;
+          final transactionProvider = mainProvider.transactionProvider;
+          final goalProvider = mainProvider.goalProvider;
+          final categoryProvider = mainProvider.categoryProvider;   
+
+        print("categoryProvider: ${categoryProvider.categories} ");
+        print("goalProvider: ${goalProvider.goals}");
+        print("transactionProvider: ${transactionProvider.transactions}");
+        print("accountProvider: ${accountProvider.accounts}");
+
+          if (mainProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (provider.error != null) {
+          if (mainProvider.error != null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -48,13 +59,13 @@ class HomeScreen extends StatelessWidget {
                   Icon(Icons.error, color: Colors.red[400], size: 64),
                   const SizedBox(height: 16),
                   Text(
-                    provider.error!,
+                    mainProvider.error!,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(color: Colors.red[400]),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => provider.loadData(),
+                    onPressed: () => mainProvider.refreshAll(),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -63,22 +74,22 @@ class HomeScreen extends StatelessWidget {
           }
 
           return RefreshIndicator(
-            onRefresh: () => provider.loadData(),
+            onRefresh: () async => mainProvider.refreshAll(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildTotalBalance(provider),
+                  _buildTotalBalance(mainProvider),
                   const SizedBox(height: 24),
                   _buildQuickActions(context),
                   const SizedBox(height: 24),
-                  _buildAccountsSection(context, provider.accounts),
+                  _buildAccountsSection(context, accountProvider.accounts),
                   const SizedBox(height: 24),
-                  _buildRecentTransactions(provider.transactions),
+                  _buildRecentTransactions(transactionProvider.transactions),
                   const SizedBox(height: 24),
-                  _buildGoalsSection(provider.goals),
+                  _buildGoalsSection(goalProvider.goals),
                 ],
               ),
             ),
@@ -88,7 +99,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTotalBalance(AppProvider provider) {
+  Widget _buildTotalBalance(MainProvider provider) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -111,10 +122,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           Text(
             'Total Balance',
-            style: GoogleFonts.poppins(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
+            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 16),
           ),
           const SizedBox(height: 8),
           Text(
@@ -148,7 +156,12 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, double amount, Color color, IconData icon) {
+  Widget _buildStatItem(
+    String label,
+    double amount,
+    Color color,
+    IconData icon,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -158,10 +171,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: GoogleFonts.poppins(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
+              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
             ),
           ],
         ),
@@ -314,9 +324,7 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Text(
                   account.name,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   account.typeDisplay,
@@ -348,10 +356,7 @@ class HomeScreen extends StatelessWidget {
       children: [
         Text(
           'Recent Transactions',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         if (recentTransactions.isEmpty)
@@ -375,14 +380,16 @@ class HomeScreen extends StatelessWidget {
             ),
           )
         else
-          ...recentTransactions.map((transaction) => _buildTransactionCard(transaction)),
+          ...recentTransactions.map(
+            (transaction) => _buildTransactionCard(transaction),
+          ),
       ],
     );
   }
 
   Widget _buildTransactionCard(Transaction transaction) {
-    final color = transaction.transactionType == TransactionType.OUTGOING 
-        ? Colors.red[400] 
+    final color = transaction.transactionType == TransactionType.OUTGOING
+        ? Colors.red[400]
         : Colors.green[400];
 
     return Container(
@@ -402,8 +409,8 @@ class HomeScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              transaction.transactionType == TransactionType.OUTGOING 
-                  ? Icons.arrow_upward 
+              transaction.transactionType == TransactionType.OUTGOING
+                  ? Icons.arrow_upward
                   : Icons.arrow_downward,
               color: color,
               size: 20,
@@ -416,9 +423,7 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Text(
                   transaction.description,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   DateFormat('dd MMM yyyy').format(transaction.date),
@@ -449,10 +454,7 @@ class HomeScreen extends StatelessWidget {
       children: [
         Text(
           'My Goals',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         if (goals.isEmpty)
@@ -498,9 +500,7 @@ class HomeScreen extends StatelessWidget {
             children: [
               Text(
                 goal.name,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               ),
               Text(
                 goal.statusDisplay,

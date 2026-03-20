@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../providers/app_provider.dart';
-import '../../features/goals/domain/entities/goal.dart';
+import '../providers/goal_provider.dart';
+import '../../domain/entities/goal.dart';
 
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
@@ -19,7 +19,7 @@ class GoalsScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF2E7D32),
         foregroundColor: Colors.white,
       ),
-      body: Consumer<AppProvider>(
+      body: Consumer<GoalProvider>(
         builder: (context, provider, child) {
           final goals = provider.goals;
 
@@ -120,11 +120,11 @@ class GoalsScreen extends StatelessWidget {
   }
 
   Widget _buildGoalCard(BuildContext context, Goal goal) {
-    Color progressColor = goal.isAchieved 
-        ? Colors.green 
-        : goal.isOverdue 
-            ? Colors.red 
-            : Colors.blue;
+    Color progressColor = goal.isAchieved
+        ? Colors.green
+        : goal.isOverdue
+        ? Colors.red
+        : Colors.blue;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -157,7 +157,10 @@ class GoalsScreen extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: progressColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -174,7 +177,7 @@ class GoalsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Progress bar
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,9 +217,9 @@ class GoalsScreen extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Additional info
             Row(
               children: [
@@ -241,13 +244,15 @@ class GoalsScreen extends StatelessWidget {
                   ),
               ],
             ),
-            
+
             if (!goal.isAchieved && !goal.isOverdue) ...[
               const SizedBox(height: 8),
               Text(
                 '${goal.daysRemaining} day${goal.daysRemaining > 1 ? 's' : ''} remaining',
                 style: GoogleFonts.poppins(
-                  color: goal.daysRemaining <= 7 ? Colors.orange : Colors.grey[600],
+                  color: goal.daysRemaining <= 7
+                      ? Colors.orange
+                      : Colors.grey[600],
                   fontSize: 12,
                 ),
               ),
@@ -259,10 +264,7 @@ class GoalsScreen extends StatelessWidget {
   }
 
   void _showAddGoalDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const AddGoalDialog(),
-    );
+    showDialog(context: context, builder: (context) => const AddGoalDialog());
   }
 }
 
@@ -278,7 +280,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
   final _nameController = TextEditingController();
   final _targetAmountController = TextEditingController();
   final _currentAmountController = TextEditingController(text: '0');
-  
+
   DateTime _deadline = DateTime.now().add(const Duration(days: 30));
 
   @override
@@ -433,7 +435,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
       deadline: _deadline,
     );
 
-    context.read<AppProvider>().addGoal(goal);
+    context.read<GoalProvider>().addGoal(goal);
     Navigator.pop(context);
   }
 }

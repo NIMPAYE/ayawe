@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../providers/app_provider.dart';
-import '../../features/accounts/domain/entities/account.dart';
+import '../providers/account_provider.dart';
+import '../../domain/entities/account.dart';
 
 class AccountsScreen extends StatelessWidget {
   const AccountsScreen({super.key});
@@ -18,7 +18,7 @@ class AccountsScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF2E7D32),
         foregroundColor: Colors.white,
       ),
-      body: Consumer<AppProvider>(
+      body: Consumer<AccountProvider>(
         builder: (context, provider, child) {
           final accounts = provider.accounts;
 
@@ -27,7 +27,11 @@ class AccountsScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.account_balance_wallet, color: Colors.grey[400], size: 64),
+                  Icon(
+                    Icons.account_balance_wallet,
+                    color: Colors.grey[400],
+                    size: 64,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'No Accounts',
@@ -43,7 +47,8 @@ class AccountsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () => Navigator.pushNamed(context, '/add_account'),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/add_account'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2E7D32),
                       foregroundColor: Colors.white,
@@ -151,7 +156,9 @@ class AccountsScreen extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: account.currentBalance >= 0 ? Colors.green : Colors.red,
+                      color: account.currentBalance >= 0
+                          ? Colors.green
+                          : Colors.red,
                     ),
                   ),
                 ],

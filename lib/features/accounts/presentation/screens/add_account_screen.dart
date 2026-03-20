@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../providers/app_provider.dart';
-import '../../features/accounts/domain/entities/account.dart';
+import '../providers/account_provider.dart';
+import '../../domain/entities/account.dart';
 
 class AddAccountScreen extends StatefulWidget {
   const AddAccountScreen({super.key});
@@ -15,7 +15,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController(text: '0');
-  
+
   AccountType _accountType = AccountType.CASH;
   Currency _currency = Currency.BIF;
 
@@ -63,18 +63,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       children: [
         Text(
           'Account Name',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: _nameController,
           decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: Colors.grey[50],
             hintText: 'e.g., Cash Wallet, Lumicash',
@@ -96,10 +91,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       children: [
         Text(
           'Account Type',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         Column(
@@ -111,10 +103,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _accountType == type ? Colors.green[50] : Colors.grey[100],
+                    color: _accountType == type
+                        ? Colors.green[50]
+                        : Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _accountType == type ? Colors.green : Colors.grey[300]!,
+                      color: _accountType == type
+                          ? Colors.green
+                          : Colors.grey[300]!,
                     ),
                   ),
                   child: Row(
@@ -122,7 +118,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       Radio<AccountType>(
                         value: type,
                         groupValue: _accountType,
-                        onChanged: (value) => setState(() => _accountType = value!),
+                        onChanged: (value) =>
+                            setState(() => _accountType = value!),
                         activeColor: Colors.green,
                       ),
                       const SizedBox(width: 12),
@@ -131,7 +128,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           _getTypeDisplay(type),
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w600,
-                            color: _accountType == type ? Colors.green : Colors.black87,
+                            color: _accountType == type
+                                ? Colors.green
+                                : Colors.black87,
                           ),
                         ),
                       ),
@@ -152,26 +151,29 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       children: [
         Text(
           'Currency',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         Row(
           children: Currency.values.map((currency) {
             return Expanded(
               child: Padding(
-                padding: EdgeInsets.only(right: currency == Currency.USD ? 0 : 8),
+                padding: EdgeInsets.only(
+                  right: currency == Currency.USD ? 0 : 8,
+                ),
                 child: GestureDetector(
                   onTap: () => setState(() => _currency = currency),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _currency == currency ? Colors.blue[50] : Colors.grey[100],
+                      color: _currency == currency
+                          ? Colors.blue[50]
+                          : Colors.grey[100],
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: _currency == currency ? Colors.blue : Colors.grey[300]!,
+                        color: _currency == currency
+                            ? Colors.blue
+                            : Colors.grey[300]!,
                       ),
                     ),
                     child: Column(
@@ -179,7 +181,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         Radio<Currency>(
                           value: currency,
                           groupValue: _currency,
-                          onChanged: (value) => setState(() => _currency = value!),
+                          onChanged: (value) =>
+                              setState(() => _currency = value!),
                           activeColor: Colors.blue,
                         ),
                         const SizedBox(height: 4),
@@ -187,7 +190,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           currency.toString().split('.').last,
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w600,
-                            color: _currency == currency ? Colors.blue : Colors.black87,
+                            color: _currency == currency
+                                ? Colors.blue
+                                : Colors.black87,
                           ),
                         ),
                       ],
@@ -208,19 +213,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       children: [
         Text(
           'Initial Balance',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: _balanceController,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: Colors.grey[50],
             prefixText: '${_currency.toString().split('.').last} ',
@@ -255,10 +255,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         ),
         child: Text(
           'Create Account',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -285,7 +282,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       currency: _currency,
     );
 
-    context.read<AppProvider>().addAccount(account);
+    context.read<AccountProvider>().addAccount(account);
     Navigator.pop(context);
   }
 }

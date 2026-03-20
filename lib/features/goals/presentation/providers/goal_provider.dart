@@ -1,0 +1,63 @@
+import 'package:flutter/material.dart';
+import '../../domain/entities/goal.dart';
+import '../../domain/repositories/goal_repository.dart';
+
+class GoalProvider extends ChangeNotifier {
+  final GoalRepository _goalRepository;
+
+  GoalProvider(this._goalRepository);
+
+  List<Goal> _goals = [];
+  bool _isLoading = false;
+  String? _error;
+
+  List<Goal> get goals => _goals;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  Future<void> loadGoals() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      _goals = await _goalRepository.getGoals();
+    } catch (e) {
+      _setError('Error loading goals: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> addGoal(Goal goal) async {
+    try {
+      await _goalRepository.createGoal(goal);
+      await loadGoals();
+    } catch (e) {
+      _setError('Error adding goal: $e');
+    }
+  }
+
+  Future<void> updateGoal(Goal goal) async {
+    try {
+      await _goalRepository.updateGoal(goal);
+      await loadGoals();
+    } catch (e) {
+      _setError('Error updating goal: $e');
+    }
+  }
+
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _error = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _error = null;
+    notifyListeners();
+  }
+}
