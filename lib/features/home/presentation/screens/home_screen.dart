@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/theme/theme_provider.dart';
 import '../../../../presentation/providers/main_provider.dart';
 import '../../../accounts/domain/entities/account.dart';
 import '../../../transactions/domain/entities/transaction.dart';
@@ -28,12 +27,8 @@ class HomeScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: Icon(
-              context.watch<ThemeProvider>().isDark
-                  ? Icons.light_mode_rounded
-                  : Icons.dark_mode_rounded,
-            ),
-            onPressed: () => context.read<ThemeProvider>().toggleTheme(),
+            icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: () {},
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -88,13 +83,11 @@ class HomeScreen extends StatelessWidget {
             onRefresh: () async => mainProvider.refreshAll(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _BalanceCard(provider: mainProvider),
-                  const SizedBox(height: 24),
-                  _QuickActions(),
                   const SizedBox(height: 28),
                   _SectionHeader(
                     title: 'Mes Comptes',
@@ -241,89 +234,6 @@ class _BalanceStat extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─────────────── Quick Actions ───────────────
-
-class _QuickActions extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final ext = context.appTheme;
-
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionButton(
-            label: 'Transaction',
-            icon: FontAwesomeIcons.plus,
-            gradient: ext.incomeGradient,
-            onTap: () => Navigator.pushNamed(context, '/add_transaction'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _ActionButton(
-            label: 'Nouveau Compte',
-            icon: FontAwesomeIcons.wallet,
-            gradient: LinearGradient(
-              colors: [
-                theme.colorScheme.primary,
-                theme.colorScheme.primary.withAlpha(200),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            onTap: () => Navigator.pushNamed(context, '/add_account'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final LinearGradient gradient;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      borderRadius: BorderRadius.circular(14),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(gradient: gradient),
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Column(
-            children: [
-              FaIcon(icon, color: Colors.white, size: 20),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
