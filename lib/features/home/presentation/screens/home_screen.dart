@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../../presentation/providers/main_provider.dart';
 import '../../../accounts/domain/entities/account.dart';
 import '../../../transactions/domain/entities/transaction.dart';
@@ -13,83 +15,103 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
           'Ayawe',
-          style: GoogleFonts.poppins(
+          style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
           ),
         ),
-        backgroundColor: const Color(0xFF2E7D32),
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () {
-              context.read<MainProvider>().refreshAll();
-            },
+            icon: Icon(
+              context.watch<ThemeProvider>().isDark
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
+            ),
+            onPressed: () => context.read<ThemeProvider>().toggleTheme(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => context.read<MainProvider>().refreshAll(),
           ),
         ],
       ),
       body: Consumer<MainProvider>(
         builder: (context, mainProvider, child) {
-        
-          final accountProvider = mainProvider.accountProvider;
-          final transactionProvider = mainProvider.transactionProvider;
-          final goalProvider = mainProvider.goalProvider;
-          final categoryProvider = mainProvider.categoryProvider;   
-
-        print("categoryProvider: ${categoryProvider.categories} ");
-        print("goalProvider: ${goalProvider.goals}");
-        print("transactionProvider: ${transactionProvider.transactions}");
-        print("accountProvider: ${accountProvider.accounts}");
-
           if (mainProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (mainProvider.error != null) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, color: Colors.red[400], size: 64),
-                  const SizedBox(height: 16),
-                  Text(
-                    mainProvider.error!,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(color: Colors.red[400]),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => mainProvider.refreshAll(),
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
               ),
             );
           }
 
+          if (mainProvider.error != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline_rounded,
+                        color: ext.expense, size: 64),
+                    const SizedBox(height: 16),
+                    Text(
+                      mainProvider.error!,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyLarge
+                          ?.copyWith(color: ext.expense),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => mainProvider.refreshAll(),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final accountProvider = mainProvider.accountProvider;
+          final transactionProvider = mainProvider.transactionProvider;
+          final goalProvider = mainProvider.goalProvider;
+
           return RefreshIndicator(
+            color: theme.colorScheme.primary,
             onRefresh: () async => mainProvider.refreshAll(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildTotalBalance(mainProvider),
+                  _BalanceCard(provider: mainProvider),
                   const SizedBox(height: 24),
-                  _buildQuickActions(context),
-                  const SizedBox(height: 24),
-                  _buildAccountsSection(context, accountProvider.accounts),
-                  const SizedBox(height: 24),
-                  _buildRecentTransactions(transactionProvider.transactions),
-                  const SizedBox(height: 24),
-                  _buildGoalsSection(goalProvider.goals),
+                  _QuickActions(),
+                  const SizedBox(height: 28),
+                  _SectionHeader(
+                    title: 'Mes Comptes',
+                    onViewAll: () =>
+                        Navigator.pushNamed(context, '/accounts'),
+                  ),
+                  const SizedBox(height: 12),
+                  _AccountsList(accounts: accountProvider.accounts),
+                  const SizedBox(height: 28),
+                  _SectionHeader(title: 'Transactions Récentes'),
+                  const SizedBox(height: 12),
+                  _TransactionsList(
+                      transactions: transactionProvider.transactions),
+                  const SizedBox(height: 28),
+                  _SectionHeader(title: 'Mes Objectifs'),
+                  const SizedBox(height: 12),
+                  _GoalsList(goals: goalProvider.goals),
                 ],
               ),
             ),
@@ -98,22 +120,28 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildTotalBalance(MainProvider provider) {
+// ─────────────── Balance Card ───────────────
+
+class _BalanceCard extends StatelessWidget {
+  final MainProvider provider;
+  const _BalanceCard({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final ext = context.appTheme;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.green[600]!, Colors.green[400]!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
+        gradient: ext.balanceGradient,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Theme.of(context).colorScheme.primary.withAlpha(60),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -121,33 +149,46 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Total Balance',
-            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 16),
+            'Solde Total',
+            style: GoogleFonts.poppins(
+              color: Colors.white.withAlpha(180),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            '${provider.totalBalance.toStringAsFixed(2)} BIF',
+            '${_formatAmount(provider.totalBalance)} BIF',
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStatItem(
-                'Income',
-                provider.totalIncome,
-                Colors.green[300]!,
-                FontAwesomeIcons.arrowTrendUp,
+              Expanded(
+                child: _BalanceStat(
+                  label: 'Revenus',
+                  amount: provider.totalIncome,
+                  icon: FontAwesomeIcons.arrowTrendUp,
+                  color: const Color(0xFF00E5A0),
+                ),
               ),
-              _buildStatItem(
-                'Expenses',
-                provider.totalExpenses,
-                Colors.red[300]!,
-                FontAwesomeIcons.arrowTrendDown,
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withAlpha(40),
+              ),
+              Expanded(
+                child: _BalanceStat(
+                  label: 'Dépenses',
+                  amount: provider.totalExpenses,
+                  icon: FontAwesomeIcons.arrowTrendDown,
+                  color: const Color(0xFFFF8E8E),
+                ),
               ),
             ],
           ),
@@ -155,291 +196,335 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildStatItem(
-    String label,
-    double amount,
-    Color color,
-    IconData icon,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            FaIcon(icon, color: color, size: 16),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '${amount.toStringAsFixed(0)} BIF',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+class _BalanceStat extends StatelessWidget {
+  final String label;
+  final double amount;
+  final IconData icon;
+  final Color color;
+
+  const _BalanceStat({
+    required this.label,
+    required this.amount,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              FaIcon(icon, color: color, size: 12),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  color: Colors.white.withAlpha(180),
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            '${_formatAmount(amount)} BIF',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildQuickActions(BuildContext context) {
+// ─────────────── Quick Actions ───────────────
+
+class _QuickActions extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+
     return Row(
       children: [
         Expanded(
-          child: _buildActionButton(
-            context,
-            'Add Transaction',
-            FontAwesomeIcons.plus,
-            Colors.blue,
-            () => Navigator.pushNamed(context, '/add_transaction'),
+          child: _ActionButton(
+            label: 'Transaction',
+            icon: FontAwesomeIcons.plus,
+            gradient: ext.incomeGradient,
+            onTap: () => Navigator.pushNamed(context, '/add_transaction'),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildActionButton(
-            context,
-            'New Account',
-            FontAwesomeIcons.wallet,
-            Colors.orange,
-            () => Navigator.pushNamed(context, '/add_account'),
+          child: _ActionButton(
+            label: 'Nouveau Compte',
+            icon: FontAwesomeIcons.wallet,
+            gradient: LinearGradient(
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.primary.withAlpha(200),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            onTap: () => Navigator.pushNamed(context, '/add_account'),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildActionButton(
-    BuildContext context,
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            FaIcon(icon, color: Colors.white, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final LinearGradient gradient;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(gradient: gradient),
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          child: Column(
+            children: [
+              FaIcon(icon, color: Colors.white, size: 20),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildAccountsSection(BuildContext context, List<Account> accounts) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+// ─────────────── Section Header ───────────────
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback? onViewAll;
+
+  const _SectionHeader({required this.title, this.onViewAll});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'My Accounts',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+        Text(title, style: theme.textTheme.titleLarge),
+        if (onViewAll != null)
+          TextButton(
+            onPressed: onViewAll,
+            child: Text(
+              'Tout voir',
+              style: GoogleFonts.poppins(fontSize: 13),
             ),
-            TextButton(
-              onPressed: () => Navigator.pushNamed(context, '/accounts'),
-              child: Text('View All', style: GoogleFonts.poppins()),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (accounts.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.account_balance_wallet, color: Colors.grey[400]),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'No accounts. Add your first account!',
-                    style: GoogleFonts.poppins(color: Colors.grey[600]),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          ...accounts.take(3).map((account) => _buildAccountCard(account)),
+          ),
       ],
     );
   }
+}
 
-  Widget _buildAccountCard(Account account) {
+// ─────────────── Accounts List ───────────────
+
+class _AccountsList extends StatelessWidget {
+  final List<Account> accounts;
+  const _AccountsList({required this.accounts});
+
+  @override
+  Widget build(BuildContext context) {
+    if (accounts.isEmpty) {
+      return _EmptyState(
+        icon: Icons.account_balance_wallet_outlined,
+        message: "Aucun compte. Ajoutez votre premier compte !",
+      );
+    }
+    return Column(
+      children: accounts
+          .take(3)
+          .map((account) => _AccountCard(account: account))
+          .toList(),
+    );
+  }
+}
+
+class _AccountCard extends StatelessWidget {
+  final Account account;
+  const _AccountCard({required this.account});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: ext.border),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(8),
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(10),
             ),
+            alignment: Alignment.center,
             child: Text(
               account.typeDisplay.split(' ')[0],
-              style: const TextStyle(fontSize: 20),
+              style: const TextStyle(fontSize: 18),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   account.name,
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleSmall,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   account.typeDisplay,
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: theme.textTheme.bodySmall,
                 ),
               ],
             ),
           ),
           Text(
-            '${account.currentBalance.toStringAsFixed(2)} ${account.currencySymbol}',
-            style: GoogleFonts.poppins(
+            '${_formatAmount(account.currentBalance)} ${account.currencySymbol}',
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              fontSize: 16,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildRecentTransactions(List<Transaction> transactions) {
-    final recentTransactions = transactions.take(5).toList();
+// ─────────────── Transactions List ───────────────
 
+class _TransactionsList extends StatelessWidget {
+  final List<Transaction> transactions;
+  const _TransactionsList({required this.transactions});
+
+  @override
+  Widget build(BuildContext context) {
+    final recent = transactions.take(5).toList();
+    if (recent.isEmpty) {
+      return _EmptyState(
+        icon: Icons.receipt_long_outlined,
+        message: "Aucune transaction. Commencez à enregistrer !",
+      );
+    }
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recent Transactions',
-          style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        if (recentTransactions.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.receipt_long, color: Colors.grey[400]),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'No transactions. Start recording your expenses!',
-                    style: GoogleFonts.poppins(color: Colors.grey[600]),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          ...recentTransactions.map(
-            (transaction) => _buildTransactionCard(transaction),
-          ),
-      ],
+      children: recent
+          .map((t) => _TransactionCard(transaction: t))
+          .toList(),
     );
   }
+}
 
-  Widget _buildTransactionCard(Transaction transaction) {
-    final color = transaction.transactionType == TransactionType.OUTGOING
-        ? Colors.red[400]
-        : Colors.green[400];
+class _TransactionCard extends StatelessWidget {
+  final Transaction transaction;
+  const _TransactionCard({required this.transaction});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+    final isExpense = transaction.transactionType == TransactionType.OUTGOING;
+    final color = isExpense ? ext.expense : ext.income;
+    final bgColor = isExpense ? ext.expenseSurface : ext.incomeSurface;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: ext.border),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: color?.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: bgColor,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              transaction.transactionType == TransactionType.OUTGOING
-                  ? Icons.arrow_upward
-                  : Icons.arrow_downward,
+              isExpense
+                  ? Icons.arrow_upward_rounded
+                  : Icons.arrow_downward_rounded,
               color: color,
               size: 20,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   transaction.description,
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   DateFormat('dd MMM yyyy').format(transaction.date),
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: theme.textTheme.bodySmall,
                 ),
               ],
             ),
           ),
           Text(
             '${transaction.amountDisplay} BIF',
-            style: GoogleFonts.poppins(
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              fontSize: 16,
               color: color,
             ),
           ),
@@ -447,50 +532,46 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildGoalsSection(List<Goal> goals) {
+// ─────────────── Goals List ───────────────
+
+class _GoalsList extends StatelessWidget {
+  final List<Goal> goals;
+  const _GoalsList({required this.goals});
+
+  @override
+  Widget build(BuildContext context) {
+    if (goals.isEmpty) {
+      return _EmptyState(
+        icon: Icons.flag_outlined,
+        message: "Aucun objectif. Définissez votre premier objectif !",
+      );
+    }
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'My Goals',
-          style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        if (goals.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.flag, color: Colors.grey[400]),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'No goals. Set your first savings goal!',
-                    style: GoogleFonts.poppins(color: Colors.grey[600]),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          ...goals.take(2).map((goal) => _buildGoalCard(goal)),
-      ],
+      children: goals.take(2).map((g) => _GoalCard(goal: g)).toList(),
     );
   }
+}
 
-  Widget _buildGoalCard(Goal goal) {
+class _GoalCard extends StatelessWidget {
+  final Goal goal;
+  const _GoalCard({required this.goal});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+    final progressColor =
+        goal.isAchieved ? ext.income : theme.colorScheme.primary;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: ext.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,43 +579,57 @@ class HomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                goal.name,
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              Expanded(
+                child: Text(
+                  goal.name,
+                  style: theme.textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              Text(
-                goal.statusDisplay,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: goal.isAchieved ? Colors.green : Colors.orange,
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: goal.isAchieved
+                      ? ext.incomeSurface
+                      : ext.expenseSurface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  goal.statusDisplay,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: goal.isAchieved ? ext.income : ext.warning,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: goal.progress,
-            backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(
-              goal.isAchieved ? Colors.green : Colors.blue,
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: goal.progress,
+              minHeight: 6,
+              backgroundColor: ext.emptyState,
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${goal.currentAmount.toStringAsFixed(0)} / ${goal.targetAmount.toStringAsFixed(0)} BIF',
-                style: GoogleFonts.poppins(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                '${_formatAmount(goal.currentAmount)} / ${_formatAmount(goal.targetAmount)} BIF',
+                style: theme.textTheme.bodySmall,
               ),
               Text(
                 goal.progressDisplay,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: progressColor,
                 ),
               ),
             ],
@@ -543,4 +638,48 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─────────────── Empty State ───────────────
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+
+  const _EmptyState({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+      decoration: BoxDecoration(
+        color: ext.emptyState,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: ext.textTertiary, size: 28),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: ext.textTertiary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────── Helpers ───────────────
+
+String _formatAmount(double amount) {
+  final formatter = NumberFormat('#,##0', 'fr');
+  return formatter.format(amount);
 }

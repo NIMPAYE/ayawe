@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/di/injection_container.dart' as di;
+import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'presentation/providers/main_provider.dart';
 import 'features/home/presentation/screens/home_screen.dart';
 import 'features/transactions/presentation/screens/add_transaction_screen.dart';
@@ -25,6 +27,9 @@ class AyaweApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (_) => ThemeProvider(),
+        ),
         ChangeNotifierProvider<AccountProvider>(
           create: (context) =>
               AccountProvider(di.sl(), di.sl())..loadAccounts(),
@@ -48,19 +53,22 @@ class AyaweApp extends StatelessWidget {
           ),
         ),
       ],
-      child: MaterialApp(
-        title: 'Ayawe - Personal Finance Manager',
-        theme: ThemeData(
-          primarySwatch: Colors.green,
-          useMaterial3: true,
-          fontFamily: 'Poppins',
-        ),
-        home: const HomeScreen(),
-        routes: {
-          '/add_transaction': (context) => const AddTransactionScreen(),
-          '/add_account': (context) => const AddAccountScreen(),
-          '/accounts': (context) => const AccountsScreen(),
-          '/goals': (context) => const GoalsScreen(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp(
+            title: 'Ayawe',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: themeProvider.themeMode,
+            home: const HomeScreen(),
+            routes: {
+              '/add_transaction': (context) => const AddTransactionScreen(),
+              '/add_account': (context) => const AddAccountScreen(),
+              '/accounts': (context) => const AccountsScreen(),
+              '/goals': (context) => const GoalsScreen(),
+            },
+          );
         },
       ),
     );
