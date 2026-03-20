@@ -20,6 +20,28 @@ class AccountProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  Map<Currency, double> get balanceByCurrency {
+    final map = <Currency, double>{};
+    for (final account in _accounts) {
+      map[account.currency] = (map[account.currency] ?? 0) + account.currentBalance;
+    }
+    return map;
+  }
+
+  double totalBalanceFor(Currency currency) =>
+      balanceByCurrency[currency] ?? 0.0;
+
+  /// Primary currency is the one with the most accounts, fallback to BIF.
+  Currency get primaryCurrency {
+    if (_accounts.isEmpty) return Currency.BIF;
+    final counts = <Currency, int>{};
+    for (final a in _accounts) {
+      counts[a.currency] = (counts[a.currency] ?? 0) + 1;
+    }
+    return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
+  @Deprecated('Use balanceByCurrency instead')
   double get totalBalance {
     double total = 0.0;
     for (final account in _accounts) {
