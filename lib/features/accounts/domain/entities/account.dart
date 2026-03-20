@@ -1,6 +1,18 @@
 enum AccountType { CASH, MOBILE_MONEY, BANK }
 
-enum Currency { BIF, USD }
+enum Currency {
+  BIF,
+  USD;
+
+  String get symbol {
+    switch (this) {
+      case Currency.BIF:
+        return 'BIF';
+      case Currency.USD:
+        return 'USD';
+    }
+  }
+}
 
 class Account {
   final int? id;
