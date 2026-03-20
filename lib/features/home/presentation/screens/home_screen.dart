@@ -130,6 +130,8 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ext = context.appTheme;
+    final balances = provider.balanceByCurrency;
+    final primary = provider.primaryCurrency;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -156,8 +158,9 @@ class _BalanceCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+          // Primary currency in large
           Text(
-            '${_formatAmount(provider.totalBalance)} BIF',
+            '${_formatAmount(balances[primary] ?? 0)} ${primary.symbol}',
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 32,
@@ -165,6 +168,20 @@ class _BalanceCard extends StatelessWidget {
               letterSpacing: -0.5,
             ),
           ),
+          // Other currencies below
+          ...balances.entries
+              .where((e) => e.key != primary)
+              .map((e) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '${_formatAmount(e.value)} ${e.key.symbol}',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withAlpha(160),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )),
           const SizedBox(height: 20),
           Row(
             children: [
