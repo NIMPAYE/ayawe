@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/account_provider.dart';
 import '../../domain/entities/account.dart';
+import 'account_detail_screen.dart';
 
 class AccountsScreen extends StatelessWidget {
   const AccountsScreen({super.key});
@@ -240,7 +241,14 @@ class _AccountDetailCard extends StatelessWidget {
         ? (account.currentBalance / currencyTotal * 100)
         : 0.0;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AccountDetailScreen(account: account),
+        ),
+      ),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -388,6 +396,7 @@ class _AccountDetailCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
