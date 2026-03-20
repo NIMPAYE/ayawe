@@ -4,7 +4,7 @@ import 'core/di/injection_container.dart' as di;
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'presentation/providers/main_provider.dart';
-import 'features/home/presentation/screens/home_screen.dart';
+import 'presentation/screens/main_shell.dart';
 import 'features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'features/accounts/presentation/screens/add_account_screen.dart';
 import 'features/accounts/presentation/screens/accounts_screen.dart';
@@ -61,7 +61,7 @@ class AyaweApp extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: themeProvider.themeMode,
-            home: const HomeScreen(),
+            home: const MainShell(),
             routes: {
               '/add_transaction': (context) => const AddTransactionScreen(),
               '/add_account': (context) => const AddAccountScreen(),
