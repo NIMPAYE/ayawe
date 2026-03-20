@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'core/di/injection_container.dart' as di;
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'presentation/providers/main_provider.dart';
 import 'presentation/screens/main_shell.dart';
 import 'features/transactions/presentation/screens/add_transaction_screen.dart';
+import 'features/transactions/presentation/screens/transactions_screen.dart';
 import 'features/accounts/presentation/screens/add_account_screen.dart';
 import 'features/accounts/presentation/screens/accounts_screen.dart';
 import 'features/goals/presentation/screens/goals_screen.dart';
@@ -16,6 +18,7 @@ import 'features/categories/presentation/providers/category_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('fr');
   await di.init();
   runApp(const AyaweApp());
 }
@@ -64,6 +67,7 @@ class AyaweApp extends StatelessWidget {
             home: const MainShell(),
             routes: {
               '/add_transaction': (context) => const AddTransactionScreen(),
+              '/transactions': (context) => const TransactionsScreen(),
               '/add_account': (context) => const AddAccountScreen(),
               '/accounts': (context) => const AccountsScreen(),
               '/goals': (context) => const GoalsScreen(),

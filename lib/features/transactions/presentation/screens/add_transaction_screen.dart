@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/transaction_provider.dart';
 import '../../domain/entities/transaction.dart';
 import '../../../categories/domain/entities/category.dart';
+import '../../../categories/presentation/providers/category_provider.dart';
 import '../../../accounts/domain/entities/account.dart';
 import '../../../accounts/presentation/providers/account_provider.dart';
 
@@ -20,475 +22,446 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
 
-  TransactionType _transactionType = TransactionType.OUTGOING;
+  TransactionType _type = TransactionType.OUTGOING;
   Account? _selectedAccount;
   Category? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
 
-  List<Account> _accounts = [];
-  List<Category> _categories = [];
-
   @override
-  void initState() {
-    super.initState();
-    _loadData();
+  void dispose() {
+    _descriptionController.dispose();
+    _amountController.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadData() async {
-    // For simplicity, we'll use mock data here
-    // In a real app, you would load from repositories
-    if (mounted) {
-      setState(() {
-        _accounts = context.read<AccountProvider>().accounts;
-        _categories = [
-          // Mock categories - in real app, load from repository
-          const Category(
-            name: 'Transport',
-            type: CategoryType.EXPENSE,
-            icon: '🚌',
-          ),
-          const Category(name: 'Meals', type: CategoryType.EXPENSE, icon: '🍔'),
-          const Category(name: 'Salary', type: CategoryType.INCOME, icon: '💼'),
-        ];
-        if (_accounts.isNotEmpty) _selectedAccount = _accounts.first;
-        if (_categories.isNotEmpty) {
-          final filteredCategories = _categories
-              .where(
-                (c) =>
-                    c.type ==
-                    (_transactionType == TransactionType.OUTGOING
-                        ? CategoryType.EXPENSE
-                        : CategoryType.INCOME),
-              )
-              .toList();
-          if (filteredCategories.isNotEmpty) {
-            _selectedCategory = filteredCategories.first;
-          }
-        }
-      });
-    }
-  }
+  CategoryType get _matchingCategoryType =>
+      _type == TransactionType.OUTGOING
+          ? CategoryType.EXPENSE
+          : CategoryType.INCOME;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final accounts = context.watch<AccountProvider>().accounts;
+    final allCategories = context.watch<CategoryProvider>().categories;
+    final filteredCategories = allCategories
+        .where((c) => c.type == _matchingCategoryType)
+        .toList();
+
+    if (_selectedAccount != null &&
+        !accounts.contains(_selectedAccount)) {
+      _selectedAccount = null;
+    }
+    if (_selectedCategory != null &&
+        !filteredCategories.contains(_selectedCategory)) {
+      _selectedCategory = null;
+    }
+
+    final isExpense = _type == TransactionType.OUTGOING;
+    final accentColor = isExpense ? ext.expense : ext.income;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'New Transaction',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  children: [
-                    _buildTransactionTypeSelector(),
-                    const SizedBox(height: 20),
-                    _buildAccountSelector(),
-                    const SizedBox(height: 20),
-                    _buildCategorySelector(),
-                    const SizedBox(height: 20),
-                    _buildAmountField(),
-                    const SizedBox(height: 20),
-                    _buildDescriptionField(),
-                    const SizedBox(height: 20),
-                    _buildDateSelector(),
-                  ],
-                ),
-              ),
-              _buildSaveButton(),
-            ],
+          'Nouvelle Transaction',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTransactionTypeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Transaction Type',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Row(
+      body: Form(
+        key: _formKey,
+        child: Column(
           children: [
             Expanded(
-              child: GestureDetector(
-                onTap: () => _setTransactionType(TransactionType.OUTGOING),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _transactionType == TransactionType.OUTGOING
-                        ? Colors.red[50]
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _transactionType == TransactionType.OUTGOING
-                          ? Colors.red
-                          : Colors.grey[300]!,
-                    ),
-                  ),
-                  child: Column(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                children: [
+                  // ── Type selector ──
+                  Row(
                     children: [
-                      Icon(
-                        Icons.arrow_upward,
-                        color: _transactionType == TransactionType.OUTGOING
-                            ? Colors.red
-                            : Colors.grey[600],
+                      Expanded(
+                        child: _TypeChip(
+                          label: 'Dépense',
+                          icon: Icons.arrow_upward_rounded,
+                          color: ext.expense,
+                          isSelected: isExpense,
+                          onTap: () => _setType(TransactionType.OUTGOING),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Expense',
-                        style: GoogleFonts.poppins(
-                          color: _transactionType == TransactionType.OUTGOING
-                              ? Colors.red
-                              : Colors.grey[600],
-                          fontWeight: FontWeight.w600,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _TypeChip(
+                          label: 'Revenu',
+                          icon: Icons.arrow_downward_rounded,
+                          color: ext.income,
+                          isSelected: !isExpense,
+                          onTap: () => _setType(TransactionType.INCOMING),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 24),
+
+                  // ── Amount ──
+                  Text('Montant', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _amountController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: accentColor,
+                    ),
+                    decoration: InputDecoration(
+                      prefixText: _selectedAccount != null
+                          ? '${_selectedAccount!.currencySymbol} '
+                          : '',
+                      prefixStyle: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                      ),
+                      hintText: '0',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Entrez un montant';
+                      if (double.tryParse(v) == null) {
+                        return 'Montant invalide';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Account ──
+                  Text('Compte', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  if (accounts.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: ext.expenseSurface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded,
+                              color: ext.warning, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Aucun compte. Créez-en un d\'abord.',
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<Account>(
+                      value: _selectedAccount,
+                      isExpanded: true,
+                      decoration: const InputDecoration(),
+                      hint: const Text('Sélectionnez un compte'),
+                      items: accounts.map((a) {
+                        return DropdownMenuItem(
+                          value: a,
+                          child: Row(
+                            children: [
+                              Icon(
+                                _accountIcon(a.type),
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  a.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                '${_fmt(a.currentBalance)} ${a.currencySymbol}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: ext.textTertiary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (v) => setState(() => _selectedAccount = v),
+                      validator: (v) =>
+                          v == null ? 'Sélectionnez un compte' : null,
+                    ),
+                  const SizedBox(height: 24),
+
+                  // ── Category ──
+                  Text('Catégorie', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  if (filteredCategories.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: ext.emptyState,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Aucune catégorie disponible pour ce type.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: ext.textTertiary,
+                        ),
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: filteredCategories.map((cat) {
+                        final selected = _selectedCategory == cat;
+                        return GestureDetector(
+                          onTap: () =>
+                              setState(() => _selectedCategory = cat),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? accentColor.withAlpha(isDark ? 50 : 25)
+                                  : isDark
+                                      ? Colors.white.withAlpha(10)
+                                      : ext.emptyState,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected
+                                    ? accentColor
+                                    : isDark
+                                        ? Colors.white.withAlpha(15)
+                                        : ext.border,
+                                width: selected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(cat.icon,
+                                    style: const TextStyle(fontSize: 16)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  cat.name,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: selected
+                                        ? accentColor
+                                        : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 24),
+
+                  // ── Description ──
+                  Text('Description', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _descriptionController,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      hintText: 'Ex: Taxi centre-ville',
+                    ),
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Entrez une description'
+                        : null,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Date ──
+                  Text('Date', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _pickDate,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today_rounded,
+                              size: 18,
+                              color: theme.colorScheme.primary),
+                          const SizedBox(width: 10),
+                          Text(
+                            DateFormat('dd MMMM yyyy', 'fr')
+                                .format(_selectedDate),
+                          ),
+                          const Spacer(),
+                          Icon(Icons.keyboard_arrow_down_rounded,
+                              color: ext.textTertiary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _setTransactionType(TransactionType.INCOMING),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _transactionType == TransactionType.INCOMING
-                        ? Colors.green[50]
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _transactionType == TransactionType.INCOMING
-                          ? Colors.green
-                          : Colors.grey[300]!,
+
+            // ── Save button ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _save,
+                  child: Text(
+                    'Enregistrer',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.arrow_downward,
-                        color: _transactionType == TransactionType.INCOMING
-                            ? Colors.green
-                            : Colors.grey[600],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Income',
-                        style: GoogleFonts.poppins(
-                          color: _transactionType == TransactionType.INCOMING
-                              ? Colors.green
-                              : Colors.grey[600],
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ),
             ),
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildAccountSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Account',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        if (_accounts.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.warning, color: Colors.orange),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'No accounts available. Create an account first.',
-                    style: GoogleFonts.poppins(color: Colors.grey[600]),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          DropdownButtonFormField<Account>(
-            value: _selectedAccount,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: Colors.grey[50],
-            ),
-            items: _accounts.map((account) {
-              return DropdownMenuItem(
-                value: account,
-                child: Row(
-                  children: [
-                    Text(account.typeDisplay.split(' ')[0]),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${account.name} (${account.currentBalance.toStringAsFixed(2)} ${account.currencySymbol})',
-                      style: GoogleFonts.poppins(),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedAccount = value;
-              });
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _buildCategorySelector() {
-    final filteredCategories = _categories
-        .where(
-          (c) =>
-              c.type ==
-              (_transactionType == TransactionType.OUTGOING
-                  ? CategoryType.EXPENSE
-                  : CategoryType.INCOME),
-        )
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Category',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<Category>(
-          value: _selectedCategory,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.grey[50],
-          ),
-          items: filteredCategories.map((category) {
-            return DropdownMenuItem(
-              value: category,
-              child: Row(
-                children: [
-                  Text(category.icon),
-                  const SizedBox(width: 8),
-                  Text(category.name, style: GoogleFonts.poppins()),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedCategory = value;
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAmountField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Amount (BIF)',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _amountController,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.grey[50],
-            prefixText: 'BIF ',
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter an amount';
-            }
-            if (double.tryParse(value) == null) {
-              return 'Please enter a valid amount';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDescriptionField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Description',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _descriptionController,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.grey[50],
-            hintText: 'e.g., Taxi to downtown',
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter a description';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Date',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: _selectDate,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[50],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today),
-                const SizedBox(width: 12),
-                Text(
-                  DateFormat('dd MMM yyyy').format(_selectedDate),
-                  style: GoogleFonts.poppins(),
-                ),
-                const Spacer(),
-                const Icon(Icons.arrow_drop_down),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _saveTransaction,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E7D32),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          'Save Transaction',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
       ),
     );
   }
 
-  void _setTransactionType(TransactionType type) {
+  void _setType(TransactionType type) {
+    if (_type == type) return;
     setState(() {
-      _transactionType = type;
-      // Reset category
-      final filteredCategories = _categories
-          .where(
-            (c) =>
-                c.type ==
-                (_transactionType == TransactionType.OUTGOING
-                    ? CategoryType.EXPENSE
-                    : CategoryType.INCOME),
-          )
-          .toList();
-      if (filteredCategories.isNotEmpty) {
-        _selectedCategory = filteredCategories.first;
-      }
+      _type = type;
+      _selectedCategory = null;
     });
   }
 
-  Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
-  void _saveTransaction() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedAccount == null || _selectedCategory == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez remplir tous les champs'),
+        ),
+      );
       return;
     }
 
     final transaction = Transaction(
       accountId: _selectedAccount!.id!,
-      categoryId: _selectedCategory!.id!,
+      categoryId: _selectedCategory!.id ?? 0,
       amount: double.parse(_amountController.text),
       date: _selectedDate,
       description: _descriptionController.text,
-      transactionType: _transactionType,
+      transactionType: _type,
     );
 
-    context.read<TransactionProvider>().addTransaction(transaction);
-    Navigator.pop(context);
+    await context.read<TransactionProvider>().addTransaction(transaction);
+    if (mounted) {
+      await context.read<AccountProvider>().loadAccounts();
+      Navigator.pop(context);
+    }
   }
+
+  IconData _accountIcon(AccountType type) {
+    switch (type) {
+      case AccountType.CASH:
+        return Icons.payments_outlined;
+      case AccountType.MOBILE_MONEY:
+        return Icons.phone_android_rounded;
+      case AccountType.BANK:
+        return Icons.account_balance_rounded;
+    }
+  }
+}
+
+// ─────────────── Type Toggle Chip ───────────────
+
+class _TypeChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TypeChip({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final ext = context.appTheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color.withAlpha(isDark ? 40 : 20)
+              : isDark
+                  ? Colors.white.withAlpha(8)
+                  : ext.emptyState,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? color
+                : isDark
+                    ? Colors.white.withAlpha(15)
+                    : ext.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: isSelected ? color : ext.textTertiary),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: isSelected ? color : ext.textTertiary,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _fmt(double amount) {
+  final formatter = NumberFormat('#,##0', 'fr');
+  return formatter.format(amount);
 }

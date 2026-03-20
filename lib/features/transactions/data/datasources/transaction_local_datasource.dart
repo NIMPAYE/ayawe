@@ -1,4 +1,5 @@
 import '../models/transaction_model.dart';
+import '../../domain/entities/transaction.dart';
 import '../../../../core/database/database_helper.dart';
 
 abstract class TransactionLocalDataSource {
@@ -55,7 +56,19 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
   @override
   Future<int> createTransaction(TransactionModel transaction) async {
     final db = await _databaseHelper.database;
-    return await db.insert('transactions', transaction.toMap());
+    late int txId;
+
+    await db.transaction((txn) async {
+      txId = await txn.insert('transactions', transaction.toMap());
+
+      final sign = transaction.transactionType == TransactionType.OUTGOING ? -1 : 1;
+      await txn.rawUpdate(
+        'UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?',
+        [transaction.amount * sign, transaction.accountId],
+      );
+    });
+
+    return txId;
   }
 
   @override

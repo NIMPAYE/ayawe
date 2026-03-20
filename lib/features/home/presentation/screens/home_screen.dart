@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../presentation/providers/main_provider.dart';
 import '../../../accounts/domain/entities/account.dart';
+import '../../../accounts/presentation/providers/account_provider.dart';
 import '../../../transactions/domain/entities/transaction.dart';
+import '../../../transactions/presentation/widgets/transaction_card.dart';
+import '../../../categories/presentation/providers/category_provider.dart';
 import '../../../goals/domain/entities/goal.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -86,8 +89,8 @@ class HomeScreen extends StatelessWidget {
             color: theme.colorScheme.primary,
             onRefresh: () async => mainProvider.refreshAll(),
             child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 130),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -102,7 +105,11 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 0),
                   _AccountsList(accounts: accountProvider.accounts),
                   const SizedBox(height: 16),
-                  _SectionHeader(title: 'Transactions Récentes'),
+                  _SectionHeader(
+                    title: 'Transactions Récentes',
+                    onViewAll: () =>
+                        Navigator.pushNamed(context, '/transactions'),
+                  ),
                   const SizedBox(height: 8),
                   _TransactionsList(
                     transactions: transactionProvider.transactions,
@@ -529,77 +536,21 @@ class _TransactionsList extends StatelessWidget {
         message: "Aucune transaction. Commencez à enregistrer !",
       );
     }
+
+    final categories = context.watch<CategoryProvider>().categories;
+    final accounts = context.watch<AccountProvider>().accounts;
+    final categoryMap = {for (final c in categories) c.id: c};
+    final accountMap = {for (final a in accounts) a.id: a};
+
     return Column(
-      children: recent.map((t) => _TransactionCard(transaction: t)).toList(),
-    );
-  }
-}
-
-class _TransactionCard extends StatelessWidget {
-  final Transaction transaction;
-  const _TransactionCard({required this.transaction});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final ext = context.appTheme;
-    final isExpense = transaction.transactionType == TransactionType.OUTGOING;
-    final color = isExpense ? ext.expense : ext.income;
-    final bgColor = isExpense ? ext.expenseSurface : ext.incomeSurface;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: ext.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              isExpense
-                  ? Icons.arrow_upward_rounded
-                  : Icons.arrow_downward_rounded,
-              color: color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  transaction.description,
-                  style: theme.textTheme.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  DateFormat('dd MMM yyyy').format(transaction.date),
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '${transaction.amountDisplay} BIF',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
+      children: recent.map((t) {
+        final account = accountMap[t.accountId];
+        return TransactionCard(
+          transaction: t,
+          category: categoryMap[t.categoryId],
+          currency: account?.currencySymbol ?? 'BIF',
+        );
+      }).toList(),
     );
   }
 }
