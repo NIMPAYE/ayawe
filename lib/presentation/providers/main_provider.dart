@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../features/accounts/domain/entities/account.dart';
 import '../../features/accounts/presentation/providers/account_provider.dart';
 import '../../features/transactions/presentation/providers/transaction_provider.dart';
 import '../../features/goals/presentation/providers/goal_provider.dart';
@@ -48,7 +49,8 @@ class MainProvider extends ChangeNotifier {
       categoryProvider.error;
 
   // Computed properties
-  double get totalBalance => accountProvider.totalBalance;
+  Map<Currency, double> get balanceByCurrency => accountProvider.balanceByCurrency;
+  Currency get primaryCurrency => accountProvider.primaryCurrency;
   double get totalExpenses => transactionProvider.totalExpenses;
   double get totalIncome => transactionProvider.totalIncome;
 
