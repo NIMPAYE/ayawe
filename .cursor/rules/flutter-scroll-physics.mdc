@@ -1,0 +1,34 @@
+---
+description: All scrollable widgets must use BouncingScrollPhysics
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# Scroll Physics Convention
+
+All scrollable widgets **must** use `BouncingScrollPhysics()` as their `physics` parameter.
+
+This applies to: `ListView`, `SingleChildScrollView`, `GridView`, `CustomScrollView`, `PageView`, `TabBarView`, and any other scrollable widget.
+
+```dart
+// ✅ GOOD
+ListView(
+  physics: const BouncingScrollPhysics(),
+  children: [...],
+)
+
+SingleChildScrollView(
+  physics: const BouncingScrollPhysics(),
+  child: ...,
+)
+
+// ❌ BAD — missing physics or using other physics
+ListView(
+  children: [...],
+)
+
+SingleChildScrollView(
+  physics: const ClampingScrollPhysics(),
+  child: ...,
+)
+```

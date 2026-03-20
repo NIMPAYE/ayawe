@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/account_provider.dart';
 import '../../domain/entities/account.dart';
 
@@ -11,278 +13,735 @@ class AddAccountScreen extends StatefulWidget {
   State<AddAccountScreen> createState() => _AddAccountScreenState();
 }
 
-class _AddAccountScreenState extends State<AddAccountScreen> {
+class _AddAccountScreenState extends State<AddAccountScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _balanceController = TextEditingController(text: '0');
+  final _balanceController = TextEditingController();
 
   AccountType _accountType = AccountType.CASH;
   Currency _currency = Currency.BIF;
+  bool _isSaving = false;
+
+  late final AnimationController _heroCtrl;
+  late final Animation<double> _heroFade;
+
+  @override
+  void initState() {
+    super.initState();
+    _heroCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _heroFade = CurvedAnimation(parent: _heroCtrl, curve: Curves.easeOut);
+    _heroCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _heroCtrl.dispose();
+    _nameController.dispose();
+    _balanceController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'New Account',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          'Nouveau Compte',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: const Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView(
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 30),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildNameField(),
-                    const SizedBox(height: 20),
-                    _buildAccountTypeSelector(),
-                    const SizedBox(height: 20),
-                    _buildCurrencySelector(),
-                    const SizedBox(height: 20),
-                    _buildBalanceField(),
+                    // ── Live Preview Card ──
+                    FadeTransition(
+                      opacity: _heroFade,
+                      child: _AccountPreview(
+                        name: _nameController.text.isEmpty
+                            ? _hintForType(_accountType)
+                            : _nameController.text,
+                        type: _accountType,
+                        currency: _currency,
+                        balance: double.tryParse(_balanceController.text) ?? 0,
+                        isDark: isDark,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // ── Type Selector ──
+                    _SectionLabel('Type de compte'),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: AccountType.values.map((type) {
+                        final selected = _accountType == type;
+                        return Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right: type != AccountType.values.last ? 10 : 0,
+                            ),
+                            child: _TypeTile(
+                              icon: _iconForType(type),
+                              emoji: _emojiForType(type),
+                              label: _labelForType(type),
+                              subtitle: _subtitleForType(type),
+                              selected: selected,
+                              onTap: () =>
+                                  setState(() => _accountType = type),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // ── Name ──
+                    _SectionLabel('Nom du compte'),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _nameController,
+                      textCapitalization: TextCapitalization.sentences,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: _hintForType(_accountType),
+                        prefixIcon: Container(
+                          margin: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withAlpha(
+                              isDark ? 40 : 20,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            _iconForType(_accountType),
+                            size: 20,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Veuillez entrer un nom';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 28),
+
+                    // ── Currency ──
+                    _SectionLabel('Devise'),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: Currency.values.map((currency) {
+                        final selected = _currency == currency;
+                        return Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right:
+                                  currency != Currency.values.last ? 10 : 0,
+                            ),
+                            child: _CurrencyTile(
+                              flag: _currencyFlag(currency),
+                              code: currency.symbol,
+                              name: _currencyName(currency),
+                              selected: selected,
+                              onTap: () =>
+                                  setState(() => _currency = currency),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // ── Initial Balance ──
+                    _SectionLabel('Solde initial'),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _balanceController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d+\.?\d{0,2}'),
+                        ),
+                      ],
+                      onChanged: (_) => setState(() {}),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '0',
+                        hintStyle: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: ext.textTertiary.withAlpha(100),
+                        ),
+                        prefixIcon: Container(
+                          margin: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: ext.balanceGradient,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            _currency.symbol,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value != null &&
+                            value.isNotEmpty &&
+                            double.tryParse(value) == null) {
+                          return 'Montant invalide';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Combien avez-vous actuellement dans ce compte ?',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: ext.textTertiary,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              _buildSaveButton(),
-            ],
-          ),
+            ),
+
+            // ── Save Button ──
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(isDark ? 40 : 12),
+                    blurRadius: 12,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveAccount,
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: _isSaving
+                      ? SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.add_rounded, size: 22),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Créer le compte',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildNameField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Account Name',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _nameController,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.grey[50],
-            hintText: 'e.g., Cash Wallet, Lumicash',
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter a name';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
+  // ─────────────── Helpers ───────────────
 
-  Widget _buildAccountTypeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Account Type',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Column(
-          children: AccountType.values.map((type) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: GestureDetector(
-                onTap: () => setState(() => _accountType = type),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _accountType == type
-                        ? Colors.green[50]
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _accountType == type
-                          ? Colors.green
-                          : Colors.grey[300]!,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Radio<AccountType>(
-                        value: type,
-                        groupValue: _accountType,
-                        onChanged: (value) =>
-                            setState(() => _accountType = value!),
-                        activeColor: Colors.green,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _getTypeDisplay(type),
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            color: _accountType == type
-                                ? Colors.green
-                                : Colors.black87,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCurrencySelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Currency',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: Currency.values.map((currency) {
-            return Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  right: currency == Currency.USD ? 0 : 8,
-                ),
-                child: GestureDetector(
-                  onTap: () => setState(() => _currency = currency),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _currency == currency
-                          ? Colors.blue[50]
-                          : Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _currency == currency
-                            ? Colors.blue
-                            : Colors.grey[300]!,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Radio<Currency>(
-                          value: currency,
-                          groupValue: _currency,
-                          onChanged: (value) =>
-                              setState(() => _currency = value!),
-                          activeColor: Colors.blue,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          currency.toString().split('.').last,
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            color: _currency == currency
-                                ? Colors.blue
-                                : Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBalanceField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Initial Balance',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _balanceController,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.grey[50],
-            prefixText: '${_currency.toString().split('.').last} ',
-            hintText: '0.00',
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter a balance';
-            }
-            if (double.tryParse(value) == null) {
-              return 'Please enter a valid amount';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _saveAccount,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E7D32),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          'Create Account',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
-  }
-
-  String _getTypeDisplay(AccountType type) {
+  IconData _iconForType(AccountType type) {
     switch (type) {
       case AccountType.CASH:
-        return '💵 Cash - Physical money';
+        return Icons.wallet_rounded;
       case AccountType.MOBILE_MONEY:
-        return '📱 Mobile Money - Lumicash/Econet';
+        return Icons.phone_android_rounded;
       case AccountType.BANK:
-        return '🏦 Bank - Bank account';
+        return Icons.account_balance_rounded;
     }
   }
 
-  void _saveAccount() {
+  String _emojiForType(AccountType type) {
+    switch (type) {
+      case AccountType.CASH:
+        return '💵';
+      case AccountType.MOBILE_MONEY:
+        return '📱';
+      case AccountType.BANK:
+        return '🏦';
+    }
+  }
+
+  String _labelForType(AccountType type) {
+    switch (type) {
+      case AccountType.CASH:
+        return 'Cash';
+      case AccountType.MOBILE_MONEY:
+        return 'Mobile';
+      case AccountType.BANK:
+        return 'Banque';
+    }
+  }
+
+  String _subtitleForType(AccountType type) {
+    switch (type) {
+      case AccountType.CASH:
+        return 'Espèces';
+      case AccountType.MOBILE_MONEY:
+        return 'Lumicash...';
+      case AccountType.BANK:
+        return 'Épargne';
+    }
+  }
+
+  String _hintForType(AccountType type) {
+    switch (type) {
+      case AccountType.CASH:
+        return 'Portefeuille';
+      case AccountType.MOBILE_MONEY:
+        return 'Lumicash';
+      case AccountType.BANK:
+        return 'BANCOBU';
+    }
+  }
+
+  String _currencyFlag(Currency currency) {
+    switch (currency) {
+      case Currency.BIF:
+        return '🇧🇮';
+      case Currency.USD:
+        return '🇺🇸';
+    }
+  }
+
+  String _currencyName(Currency currency) {
+    switch (currency) {
+      case Currency.BIF:
+        return 'Franc Burundais';
+      case Currency.USD:
+        return 'Dollar US';
+    }
+  }
+
+  Future<void> _saveAccount() async {
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() => _isSaving = true);
+
     final account = Account(
-      name: _nameController.text,
+      name: _nameController.text.trim(),
       type: _accountType,
-      currentBalance: double.parse(_balanceController.text),
+      currentBalance: double.tryParse(_balanceController.text) ?? 0.0,
       currency: _currency,
     );
 
-    context.read<AccountProvider>().addAccount(account);
-    Navigator.pop(context);
+    try {
+      await context.read<AccountProvider>().addAccount(account);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur lors de la création')),
+        );
+      }
+    }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SECTION LABEL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+    );
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  LIVE ACCOUNT PREVIEW
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class _AccountPreview extends StatelessWidget {
+  final String name;
+  final AccountType type;
+  final Currency currency;
+  final double balance;
+  final bool isDark;
+
+  const _AccountPreview({
+    required this.name,
+    required this.type,
+    required this.currency,
+    required this.balance,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ext = context.appTheme;
+    final formatter = NumberFormat('#,##0', 'fr');
+
+    IconData icon;
+    switch (type) {
+      case AccountType.CASH:
+        icon = Icons.wallet_rounded;
+      case AccountType.MOBILE_MONEY:
+        icon = Icons.phone_android_rounded;
+      case AccountType.BANK:
+        icon = Icons.account_balance_rounded;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: ext.balanceGradient,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6C5CE7).withAlpha(isDark ? 50 : 80),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(30),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _typeLabel(type),
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(160),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(25),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  currency.symbol,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          Text(
+            'Solde',
+            style: TextStyle(
+              color: Colors.white.withAlpha(160),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${formatter.format(balance)} ${currency.symbol}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _typeLabel(AccountType type) {
+    switch (type) {
+      case AccountType.CASH:
+        return 'Compte Cash';
+      case AccountType.MOBILE_MONEY:
+        return 'Mobile Money';
+      case AccountType.BANK:
+        return 'Compte Bancaire';
+    }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  TYPE TILE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class _TypeTile extends StatelessWidget {
+  final IconData icon;
+  final String emoji;
+  final String label;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TypeTile({
+    required this.icon,
+    required this.emoji,
+    required this.label,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: selected
+              ? theme.colorScheme.primary.withAlpha(isDark ? 35 : 18)
+              : isDark
+                  ? Colors.white.withAlpha(6)
+                  : Colors.grey.withAlpha(14),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? theme.colorScheme.primary
+                : isDark
+                    ? Colors.white.withAlpha(12)
+                    : Colors.grey.withAlpha(40),
+            width: selected ? 1.8 : 1,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withAlpha(isDark ? 20 : 30),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 26)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: selected
+                    ? theme.colorScheme.primary.withAlpha(180)
+                    : theme.colorScheme.onSurfaceVariant.withAlpha(160),
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CURRENCY TILE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class _CurrencyTile extends StatelessWidget {
+  final String flag;
+  final String code;
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CurrencyTile({
+    required this.flag,
+    required this.code,
+    required this.name,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? theme.colorScheme.primary.withAlpha(isDark ? 35 : 18)
+              : isDark
+                  ? Colors.white.withAlpha(6)
+                  : Colors.grey.withAlpha(14),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? theme.colorScheme.primary
+                : isDark
+                    ? Colors.white.withAlpha(12)
+                    : Colors.grey.withAlpha(40),
+            width: selected ? 1.8 : 1,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withAlpha(isDark ? 20 : 30),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 28)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    code,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                      color: selected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    name,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: selected
+                          ? theme.colorScheme.primary.withAlpha(180)
+                          : theme.colorScheme.onSurfaceVariant.withAlpha(160),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  size: 14,
+                  color: Colors.white,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

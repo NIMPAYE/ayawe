@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../presentation/providers/main_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../../domain/entities/transaction.dart';
 import '../../../categories/domain/entities/category.dart';
@@ -26,6 +27,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Account? _selectedAccount;
   Category? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -77,6 +79,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           children: [
             Expanded(
               child: ListView(
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 children: [
                   // ── Type selector ──
@@ -323,14 +326,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _save,
-                  child: Text(
-                    'Enregistrer',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  onPressed: _isSaving ? null : _save,
+                  child: _isSaving
+                      ? SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        )
+                      : Text(
+                          'Enregistrer',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -370,6 +382,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
+    setState(() => _isSaving = true);
+
     final transaction = Transaction(
       accountId: _selectedAccount!.id!,
       categoryId: _selectedCategory!.id ?? 0,
@@ -379,10 +393,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       transactionType: _type,
     );
 
-    await context.read<TransactionProvider>().addTransaction(transaction);
-    if (mounted) {
-      await context.read<AccountProvider>().loadAccounts();
+    try {
+      await context.read<TransactionProvider>().addTransaction(transaction);
+      if (!mounted) return;
+      await context.read<MainProvider>().loadAllData();
+      if (!mounted) return;
       Navigator.pop(context);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur lors de l\'enregistrement'),
+          ),
+        );
+      }
     }
   }
 
