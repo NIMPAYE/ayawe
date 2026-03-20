@@ -74,6 +74,7 @@ class AccountDetailScreen extends StatelessWidget {
       body: transactions.isEmpty
           ? _buildEmpty(context)
           : ListView(
+              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
               children: [
                 // ── Account info card ──
@@ -376,7 +377,7 @@ class _CategoryBar extends StatelessWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: accent.withAlpha(isDark ? 40 : 20),
-                    borderRadius: BorderRadius.circular(10),
+                    shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(
@@ -440,10 +441,10 @@ class _TransactionTile extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withAlpha(10) : theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(50),
         border: Border.all(
           color: isDark ? Colors.white.withAlpha(15) : ext.border,
         ),
@@ -456,7 +457,7 @@ class _TransactionTile extends StatelessWidget {
             height: 42,
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(12),
+              shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
             child: Text(

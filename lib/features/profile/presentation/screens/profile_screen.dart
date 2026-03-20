@@ -23,6 +23,7 @@ class ProfileScreen extends StatelessWidget {
         ),
       ),
       body: ListView(
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
         children: [
           // Avatar section

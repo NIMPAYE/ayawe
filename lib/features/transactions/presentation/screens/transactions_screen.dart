@@ -45,6 +45,7 @@ class TransactionsScreen extends StatelessWidget {
       body: sorted.isEmpty
           ? _buildEmpty(context)
           : ListView.builder(
+              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
               itemCount: grouped.length,
               itemBuilder: (context, sectionIndex) {

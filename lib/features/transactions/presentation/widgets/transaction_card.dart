@@ -32,10 +32,10 @@ class TransactionCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: isDark ? Colors.white.withAlpha(10) : theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(50),
           border: Border.all(
             color: isDark ? Colors.white.withAlpha(15) : ext.border,
           ),
@@ -50,7 +50,7 @@ class TransactionCard extends StatelessWidget {
                 color: isDark
                     ? Colors.white.withAlpha(12)
                     : ext.emptyState,
-                borderRadius: BorderRadius.circular(14),
+                shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
               child: Text(
