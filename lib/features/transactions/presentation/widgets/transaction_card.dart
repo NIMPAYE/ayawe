@@ -75,7 +75,7 @@ class TransactionCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    DateFormat('yyyy-MM-dd').format(transaction.date),
+                    DateFormat('dd MMM yyyy').format(transaction.date),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: ext.textTertiary,
                     ),
@@ -86,13 +86,38 @@ class TransactionCard extends StatelessWidget {
             const SizedBox(width: 10),
 
             // Amount
-            Text(
-              '$currency $sign${_fmt(transaction.amount)}',
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
+            Column(
+              crossAxisAlignment: .end,
+              children: [
+                if (category != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(isDark ? 30 : 15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      category!.name,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  '$currency $sign${_fmt(transaction.amount)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
