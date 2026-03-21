@@ -166,7 +166,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     )
                   else
                     DropdownButtonFormField<Account>(
-                      value: _selectedAccount,
+                      initialValue: _selectedAccount,
                       isExpanded: true,
                       decoration: const InputDecoration(),
                       hint: const Text('Sélectionnez un compte'),
