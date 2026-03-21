@@ -759,11 +759,17 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
       decoration: BoxDecoration(
         color: ext.emptyState,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: ext.textTertiary, size: 28),
+          Container(
+            padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                border: Border.all(width: 0.5,color: Theme.of(context).primaryColorLight),
+                shape: BoxShape.circle
+              ),
+              child: Icon(icon, color: ext.textTertiary, size: 20)),
           const SizedBox(width: 14),
           Expanded(
             child: Text(
