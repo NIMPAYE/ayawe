@@ -1,3 +1,4 @@
+import 'package:ayawe/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -143,7 +144,8 @@ class _BalanceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: ext.balanceGradient,
+        gradient:Theme.of(context).brightness==Brightness.dark?  AppColors.primaryGradient : null,
+        color: Theme.of(context).brightness==Brightness.light? AppColors.darkSurface : null ,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -191,6 +193,7 @@ class _BalanceCard extends StatelessWidget {
                   )),
           const SizedBox(height: 20),
           Row(
+            spacing: 8,
             children: [
               Expanded(
                 child: _BalanceStat(
@@ -201,7 +204,7 @@ class _BalanceCard extends StatelessWidget {
                 ),
               ),
               Container(
-                width: 1,
+                width: 2,
                 height: 40,
                 color: Colors.white.withAlpha(40),
               ),
@@ -277,7 +280,7 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _QuickActionItem(
           icon: Icons.add_rounded,
