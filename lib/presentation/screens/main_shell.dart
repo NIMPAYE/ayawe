@@ -101,10 +101,11 @@ class _CenterFAB extends StatelessWidget {
       height: 60,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: AppColors.primaryGradient,
+        gradient:Theme.of(context).brightness==Brightness.dark?  AppColors.primaryGradient : null,
+        color: Theme.of(context).brightness==Brightness.light? Colors.black : null ,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withAlpha(80),
+            color: AppColors.primary.withAlpha(60),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
