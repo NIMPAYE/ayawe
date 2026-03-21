@@ -332,20 +332,20 @@ class _AddAccountScreenState extends State<AddAccountScreen>
       case AccountType.CASH:
         return 'Espèces';
       case AccountType.MOBILE_MONEY:
-        return 'Lumicash...';
+        return 'Mobile money';
       case AccountType.BANK:
-        return 'Épargne';
+        return 'Compte bancaire';
     }
   }
 
   String _hintForType(AccountType type) {
     switch (type) {
       case AccountType.CASH:
-        return 'Portefeuille';
+        return 'Mon portefeuille..';
       case AccountType.MOBILE_MONEY:
-        return 'Lumicash';
+        return 'Mobile cash...';
       case AccountType.BANK:
-        return 'BANCOBU';
+        return 'votre banque..';
     }
   }
 
