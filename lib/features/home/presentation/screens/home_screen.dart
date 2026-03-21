@@ -141,87 +141,162 @@ class _BalanceCard extends StatelessWidget {
     final balances = provider.balanceByCurrency;
     final primary = provider.primaryCurrency;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient:Theme.of(context).brightness==Brightness.dark?  AppColors.primaryGradient : null,
-        color: Theme.of(context).brightness==Brightness.light? AppColors.darkSurface : null ,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withAlpha(60),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Solde Total',
-            style: GoogleFonts.poppins(
-              color: Colors.white.withAlpha(180),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient:Theme.of(context).brightness==Brightness.dark?  AppColors.primaryGradient :null,
+          color: Theme.of(context).brightness==Brightness.light? AppColors.darkSurface : null ,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary.withAlpha(60),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
             ),
-          ),
-          const SizedBox(height: 8),
-          // Primary currency in large
-          Text(
-            '${_formatAmount(balances[primary] ?? 0)} ${primary.symbol}',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
-            ),
-          ),
-          // Other currencies below
-          ...balances.entries
-              .where((e) => e.key != primary)
-              .map((e) => Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '${_formatAmount(e.value)} ${e.key.symbol}',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white.withAlpha(160),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+          ],
+        ),
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width,
+          height: 190,
+          child: Stack(
+            children: [
+              Positioned(
+                top: -50,
+                right: -50,
+                child: SizedBox(
+                  height: 140,
+                  width: 140,
+                  child: Stack(
+                    children: [
+                    Center(
+                      child: SizedBox(
+                        height: 86,
+                        width: 86,
+                        child: Center(
+                          child: ClipPath(
+                            clipper: RingClipper(innerRadiusRatio: .4),
+                            child: Container(
+                              color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 2),
+                              height: 80,
+                              width: 80,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  )),
-          const SizedBox(height: 20),
-          Row(
-            spacing: 8,
-            children: [
-              Expanded(
-                child: _BalanceStat(
-                  label: 'Revenus',
-                  amount: provider.totalIncome,
-                  icon: FontAwesomeIcons.arrowTrendUp,
-                  color: const Color(0xFF00E5A0),
+                    Center(
+                      child: Container(
+                        height: 140,
+                        width: 140,
+                        color: Colors.transparent,
+                        child: ClipPath(
+                          clipper: RingClipper(innerRadiusRatio: .7),
+                          child: Container(
+                            color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                            height: 140,
+                            width: 140,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],),
                 ),
               ),
-              Container(
-                width: 2,
-                height: 40,
-                color: Colors.white.withAlpha(40),
-              ),
-              Expanded(
-                child: _BalanceStat(
-                  label: 'Dépenses',
-                  amount: provider.totalExpenses,
-                  icon: FontAwesomeIcons.arrowTrendDown,
-                  color: const Color(0xFFFF8E8E),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Solde Total',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withAlpha(180),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Primary currency in large
+                    Text(
+                      '${_formatAmount(balances[primary] ?? 0)} ${primary.symbol}',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    // Other currencies below
+                    ...balances.entries
+                        .where((e) => e.key != primary)
+                        .map((e) => Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '${_formatAmount(e.value)} ${e.key.symbol}',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white.withAlpha(160),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )),
+                    const SizedBox(height: 20),
+                    Row(
+                      spacing: 8,
+                      children: [
+                        Expanded(
+                          child: _BalanceStat(
+                            label: 'Revenus',
+                            amount: provider.totalIncome,
+                            icon: FontAwesomeIcons.arrowTrendUp,
+                            color: const Color(0xFF00E5A0),
+                          ),
+                        ),
+                        Container(
+                          width: 2,
+                          height: 40,
+                          color: Colors.white.withAlpha(40),
+                        ),
+                        Expanded(
+                          child: _BalanceStat(
+                            label: 'Dépenses',
+                            amount: provider.totalExpenses,
+                            icon: FontAwesomeIcons.arrowTrendDown,
+                            color: const Color(0xFFFF8E8E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
+}
+
+class RingClipper extends CustomClipper<Path> {
+  final double innerRadiusRatio;
+
+  RingClipper({this.innerRadiusRatio = 0.7});
+
+  @override
+  Path getClip(Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final outerRadius = size.width < size.height ? size.width / 2 : size.height / 2;
+    final innerRadius = outerRadius * innerRadiusRatio;
+    final Path outerCircle = Path()..addOval(Rect.fromCircle(center: center, radius: outerRadius));
+    final Path innerCircle = Path()..addOval(Rect.fromCircle(center: center, radius: innerRadius));
+
+    return Path.combine(PathOperation.difference, outerCircle, innerCircle);
+  }
+
+  @override
+  bool shouldReclip(RingClipper oldClipper) => oldClipper.innerRadiusRatio != innerRadiusRatio;
 }
 
 class _BalanceStat extends StatelessWidget {
