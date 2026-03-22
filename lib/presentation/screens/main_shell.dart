@@ -161,7 +161,7 @@ class _NavItem extends StatelessWidget {
                 color: isSelected
                     ? theme.colorScheme.primary.withAlpha(25)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: FaIcon(icon, size: 18, color: color),
             ),

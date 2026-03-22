@@ -539,6 +539,7 @@ class _AccountCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: accent.withAlpha(isDark ? 50 : 30),
                   shape: BoxShape.circle,
+                  border: Border.all(color: theme.primaryColorLight,width: 0.4)
                 ),
                 child: Icon(
                   _typeIcons[account.type] ?? Icons.wallet,
