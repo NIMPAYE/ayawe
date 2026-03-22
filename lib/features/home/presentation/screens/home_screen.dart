@@ -194,7 +194,7 @@ class _BalanceCard extends StatelessWidget {
                         child: ClipPath(
                           clipper: RingClipper(innerRadiusRatio: .7),
                           child: Container(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                            color: Theme.of(context).brightness== .light? Colors.white.withAlpha(50):  Theme.of(context).primaryColor.withValues(alpha: 0.2),
                             height: 140,
                             width: 140,
                           ),
