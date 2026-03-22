@@ -1,17 +1,18 @@
 import 'package:ayawe/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../presentation/providers/main_provider.dart';
 import '../../../accounts/domain/entities/account.dart';
 import '../../../accounts/presentation/providers/account_provider.dart';
-import '../../../transactions/domain/entities/transaction.dart';
-import '../../../transactions/presentation/widgets/transaction_card.dart';
 import '../../../categories/presentation/providers/category_provider.dart';
 import '../../../goals/domain/entities/goal.dart';
+import '../../../transactions/domain/entities/transaction.dart';
+import '../../../transactions/presentation/widgets/transaction_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -137,7 +138,7 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ext = context.appTheme;
+   // final ext = context.appTheme;
     final balances = provider.balanceByCurrency;
     final primary = provider.primaryCurrency;
 
@@ -480,7 +481,7 @@ class _AccountsList extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         clipBehavior: Clip.none,
         itemCount: accounts.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, i) => const SizedBox(width: 12),
         itemBuilder: (context, index) => _AccountCard(account: accounts[index]),
       ),
     );
