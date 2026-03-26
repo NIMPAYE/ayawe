@@ -49,34 +49,24 @@ class RecurringTransaction {
 
   int get daysUntilDue => nextDueDate.difference(DateTime.now()).inDays;
 
-  DateTime get nextDateAfterDue {
-    switch (frequency) {
-      case RecurrenceFrequency.WEEKLY:
-        return nextDueDate.add(const Duration(days: 7));
-      case RecurrenceFrequency.BIWEEKLY:
-        return nextDueDate.add(const Duration(days: 14));
-      case RecurrenceFrequency.MONTHLY:
-        return DateTime(nextDueDate.year, nextDueDate.month + 1, nextDueDate.day);
-      case RecurrenceFrequency.YEARLY:
-        return DateTime(nextDueDate.year + 1, nextDueDate.month, nextDueDate.day);
-    }
-  }
+  DateTime get nextDateAfterDue => _advance(nextDueDate);
 
-  /// Project all occurrences within a date range (for calendar)
+  /// Project all occurrences within a date range (for calendar).
+  /// Capped at 366 iterations to prevent infinite loops.
   List<DateTime> projectOccurrences(DateTime from, DateTime to) {
     if (!isActive) return [];
     final dates = <DateTime>[];
     var d = nextDueDate;
-    // Go back to find the first occurrence at or after `from`
-    if (d.isAfter(to)) {
-      return dates;
-    }
-    while (d.isBefore(from)) {
+    if (d.isAfter(to)) return dates;
+    var safety = 0;
+    while (d.isBefore(from) && safety < 366) {
       d = _advance(d);
+      safety++;
     }
-    while (!d.isAfter(to)) {
+    while (!d.isAfter(to) && safety < 366) {
       dates.add(d);
       d = _advance(d);
+      safety++;
     }
     return dates;
   }
@@ -88,10 +78,22 @@ class RecurringTransaction {
       case RecurrenceFrequency.BIWEEKLY:
         return date.add(const Duration(days: 14));
       case RecurrenceFrequency.MONTHLY:
-        return DateTime(date.year, date.month + 1, date.day);
+        return _addMonths(date, 1);
       case RecurrenceFrequency.YEARLY:
-        return DateTime(date.year + 1, date.month, date.day);
+        return _addMonths(date, 12);
     }
+  }
+
+  /// Safely add months, clamping to the last day of the target month.
+  /// e.g. Jan 31 + 1 month = Feb 28 (not Mar 3).
+  static DateTime _addMonths(DateTime date, int months) {
+    final targetMonth = date.month + months;
+    final result = DateTime(date.year, targetMonth, date.day);
+    // If the day overflowed into the next month, clamp to last day
+    if (result.month != ((targetMonth - 1) % 12) + 1) {
+      return DateTime(date.year, targetMonth + 1, 0);
+    }
+    return result;
   }
 
   RecurringTransaction copyWith({

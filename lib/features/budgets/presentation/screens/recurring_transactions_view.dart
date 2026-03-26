@@ -102,36 +102,74 @@ class RecurringTransactionsView extends StatelessWidget {
     BuildContext context,
     RecurringTransaction rt,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final currency = context
+            .read<AccountProvider>()
+            .accounts
+            .where((a) => a.id == rt.accountId)
+            .firstOrNull
+            ?.currencySymbol ??
+        'BIF';
+    final amountController =
+        TextEditingController(text: rt.amount.toStringAsFixed(0));
+
+    final confirmedAmount = await showDialog<double>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Confirmer le paiement'),
-        content: Text(
-          'Créer la transaction "${rt.description}" de ${_fmt(rt.amount)} ${context.read<AccountProvider>().accounts.where((a) => a.id == rt.accountId).firstOrNull?.currencySymbol ?? 'BIF'} ?',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${rt.description}'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
+              ],
+              decoration: InputDecoration(
+                labelText: 'Montant ($currency)',
+                suffixText: currency,
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context, null),
             child: const Text('Annuler'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              final val = double.tryParse(amountController.text);
+              if (val != null && val > 0) Navigator.pop(context, val);
+            },
             child: const Text('Confirmer'),
           ),
         ],
       ),
     );
 
-    if (confirmed != true || !context.mounted) return;
+    amountController.dispose();
+    if (confirmedAmount == null || !context.mounted) return;
 
     final rtProvider = context.read<RecurringTransactionProvider>();
     final txProvider = context.read<TransactionProvider>();
-    final transaction = rtProvider.buildTransaction(rt);
+    final transaction =
+        rtProvider.buildTransaction(rt).copyWith(amount: confirmedAmount);
 
     await txProvider.addTransaction(transaction);
     await rtProvider.advanceNextDueDate(rt);
     if (context.mounted) {
       await context.read<MainProvider>().loadAllData();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Transaction "${rt.description}" créée (${_fmt(confirmedAmount)} $currency)'),
+        ),
+      );
     }
   }
 
@@ -569,6 +607,11 @@ class _RecurringDetailSheet extends StatelessWidget {
                         .read<RecurringTransactionProvider>()
                         .deleteRecurring(rt.id!);
                     Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('"${rt.description}" supprimée'),
+                      ),
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: ext.expense,
@@ -586,6 +629,13 @@ class _RecurringDetailSheet extends StatelessWidget {
                         .read<RecurringTransactionProvider>()
                         .toggleActive(rt);
                     Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(rt.isActive
+                            ? '"${rt.description}" désactivée'
+                            : '"${rt.description}" activée'),
+                      ),
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -734,7 +784,10 @@ class _RecurringFormSheetState extends State<_RecurringFormSheet> {
             const SizedBox(height: 16),
 
             // Amount
-            Text('Montant (BIF)', style: theme.textTheme.titleSmall),
+            Text(
+              'Montant${_selectedAccount != null ? ' (${_selectedAccount!.currencySymbol})' : ''}',
+              style: theme.textTheme.titleSmall,
+            ),
             const SizedBox(height: 6),
             TextField(
               controller: _amountController,
@@ -743,7 +796,10 @@ class _RecurringFormSheetState extends State<_RecurringFormSheet> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
               ],
-              decoration: const InputDecoration(hintText: '100000'),
+              decoration: InputDecoration(
+                hintText: '100000',
+                suffixText: _selectedAccount?.currencySymbol,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -922,6 +978,9 @@ class _RecurringFormSheetState extends State<_RecurringFormSheet> {
           ),
         );
     Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Récurrente "${_descController.text}" ajoutée')),
+    );
   }
 }
 

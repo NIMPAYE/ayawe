@@ -12,14 +12,67 @@ class BudgetProvider extends ChangeNotifier {
   String _currentMonth = _monthKey(DateTime.now());
   bool _isLoading = false;
   String? _error;
+  bool _hasRolloverAvailable = false;
 
   List<Budget> get budgets => _budgets;
   String get currentMonth => _currentMonth;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get hasRolloverAvailable => _hasRolloverAvailable;
 
   double get totalBudgeted =>
       _budgets.fold(0.0, (sum, b) => sum + b.effectiveAmount);
+
+  /// Single-pass: build a map of categoryId -> total OUTGOING spent for `month`.
+  Map<int, double> spentByCategoryMap(
+    String month,
+    List<Transaction> transactions,
+  ) {
+    final map = <int, double>{};
+    for (final t in transactions) {
+      if (t.transactionType != TransactionType.OUTGOING) continue;
+      if (_monthKey(t.date) != month) continue;
+      map[t.categoryId] = (map[t.categoryId] ?? 0) + t.amount;
+    }
+    return map;
+  }
+
+  double spentForCategory(
+    int categoryId,
+    String month,
+    List<Transaction> transactions,
+  ) {
+    return spentByCategoryMap(month, transactions)[categoryId] ?? 0.0;
+  }
+
+  /// Total spent across all budgeted categories (uses pre-computed map).
+  double totalSpentFromMap(Map<int, double> spentMap) {
+    double total = 0;
+    for (final b in _budgets) {
+      total += spentMap[b.categoryId] ?? 0;
+    }
+    return total;
+  }
+
+  /// Total and per-category for expenses outside any budget definition.
+  double unbudgetedSpent(Map<int, double> spentMap) {
+    final budgetedIds = _budgets.map((b) => b.categoryId).toSet();
+    double total = 0;
+    for (final entry in spentMap.entries) {
+      if (!budgetedIds.contains(entry.key)) {
+        total += entry.value;
+      }
+    }
+    return total;
+  }
+
+  Map<int, double> unbudgetedByCategory(Map<int, double> spentMap) {
+    final budgetedIds = _budgets.map((b) => b.categoryId).toSet();
+    return {
+      for (final entry in spentMap.entries)
+        if (!budgetedIds.contains(entry.key)) entry.key: entry.value,
+    };
+  }
 
   Future<void> loadBudgets([String? month]) async {
     if (month != null) _currentMonth = month;
@@ -32,6 +85,22 @@ class BudgetProvider extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Pre-check rollover availability. Call after loadBudgets or setMonth.
+  Future<void> checkRollover(List<Transaction> transactions) async {
+    final prev = _previousMonth(_currentMonth);
+    try {
+      final prevBudgets = await _budgetRepository.getBudgetsByMonth(prev);
+      final spentMap = spentByCategoryMap(prev, transactions);
+      _hasRolloverAvailable = prevBudgets.any((b) {
+        final spent = spentMap[b.categoryId] ?? 0;
+        return b.effectiveAmount - spent > 0;
+      });
+    } catch (_) {
+      _hasRolloverAvailable = false;
+    }
+    notifyListeners();
   }
 
   Future<void> addBudget(Budget budget) async {
@@ -61,31 +130,6 @@ class BudgetProvider extends ChangeNotifier {
     }
   }
 
-  /// Compute total spent for a category in a given month from the transaction list
-  double spentForCategory(
-    int categoryId,
-    String month,
-    List<Transaction> transactions,
-  ) {
-    return transactions
-        .where((t) =>
-            t.categoryId == categoryId &&
-            t.transactionType == TransactionType.OUTGOING &&
-            _monthKey(t.date) == month)
-        .fold(0.0, (sum, t) => sum + t.amount);
-  }
-
-  /// Total spent across all budgeted categories
-  double totalSpent(List<Transaction> transactions) {
-    double total = 0;
-    for (final b in _budgets) {
-      total += spentForCategory(b.categoryId, _currentMonth, transactions);
-    }
-    return total;
-  }
-
-  /// Apply rollover: carry savings from previousMonth into currentMonth budgets.
-  /// Creates or updates budgets for toMonth with rolloverAmount set.
   Future<void> applyRollover(
     String fromMonth,
     String toMonth,
@@ -93,8 +137,10 @@ class BudgetProvider extends ChangeNotifier {
   ) async {
     try {
       final prevBudgets = await _budgetRepository.getBudgetsByMonth(fromMonth);
+      final spentMap = spentByCategoryMap(fromMonth, transactions);
+
       for (final prev in prevBudgets) {
-        final spent = spentForCategory(prev.categoryId, fromMonth, transactions);
+        final spent = spentMap[prev.categoryId] ?? 0;
         final remaining = prev.effectiveAmount - spent;
         if (remaining <= 0) continue;
 
@@ -116,29 +162,16 @@ class BudgetProvider extends ChangeNotifier {
           ));
         }
       }
+      _hasRolloverAvailable = false;
       await loadBudgets(toMonth);
     } catch (e) {
       _setError('Erreur rollover: $e');
     }
   }
 
-  /// Check if previous month has any savings that can be rolled over
-  Future<bool> hasRolloverAvailable(
-    String fromMonth,
-    List<Transaction> transactions,
-  ) async {
-    try {
-      final prevBudgets = await _budgetRepository.getBudgetsByMonth(fromMonth);
-      for (final prev in prevBudgets) {
-        final spent = spentForCategory(prev.categoryId, fromMonth, transactions);
-        if (prev.effectiveAmount - spent > 0) return true;
-      }
-    } catch (_) {}
-    return false;
-  }
-
   void setMonth(String month) {
     _currentMonth = month;
+    _hasRolloverAvailable = false;
     loadBudgets(month);
   }
 
@@ -160,6 +193,16 @@ class BudgetProvider extends ChangeNotifier {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}';
   }
 
-  /// Helper for UI to compute month key
   static String monthKey(DateTime date) => _monthKey(date);
+
+  static String _previousMonth(String monthKey) {
+    final parts = monthKey.split('-');
+    var year = int.parse(parts[0]);
+    var month = int.parse(parts[1]) - 1;
+    if (month < 1) {
+      month = 12;
+      year--;
+    }
+    return '$year-${month.toString().padLeft(2, '0')}';
+  }
 }

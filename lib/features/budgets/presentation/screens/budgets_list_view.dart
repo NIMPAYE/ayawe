@@ -39,7 +39,25 @@ class _BudgetsListViewState extends State<BudgetsListView> {
       _selectedMonth =
           DateTime(_selectedMonth.year, _selectedMonth.month + delta, 1);
     });
-    context.read<BudgetProvider>().setMonth(_monthKey);
+    final bp = context.read<BudgetProvider>();
+    bp.setMonth(_monthKey);
+    // Refresh rollover check after month changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final txs = context.read<TransactionProvider>().transactions;
+      bp.checkRollover(txs);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Trigger rollover check whenever transactions/budgets change
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final bp = context.read<BudgetProvider>();
+      final txs = context.read<TransactionProvider>().transactions;
+      bp.checkRollover(txs);
+    });
   }
 
   @override
@@ -51,14 +69,17 @@ class _BudgetsListViewState extends State<BudgetsListView> {
 
     final budgets = budgetProvider.budgets;
     final totalBudgeted = budgetProvider.totalBudgeted;
-    final totalSpent = budgetProvider.totalSpent(transactions);
+    final spentMap = budgetProvider.spentByCategoryMap(_monthKey, transactions);
+    final totalSpent = budgetProvider.totalSpentFromMap(spentMap);
     final globalProgress = totalBudgeted > 0 ? totalSpent / totalBudgeted : 0.0;
+
+    final unbudgetedTotal = budgetProvider.unbudgetedSpent(spentMap);
+    final unbudgetedMap = budgetProvider.unbudgetedByCategory(spentMap);
 
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
       children: [
-        // Month selector
         _MonthSelector(
           month: _selectedMonth,
           onPrevious: () => _changeMonth(-1),
@@ -66,7 +87,6 @@ class _BudgetsListViewState extends State<BudgetsListView> {
         ),
         const SizedBox(height: 16),
 
-        // Summary card
         _SummaryCard(
           totalBudgeted: totalBudgeted,
           totalSpent: totalSpent,
@@ -74,30 +94,25 @@ class _BudgetsListViewState extends State<BudgetsListView> {
         ),
         const SizedBox(height: 20),
 
-        // Rollover button
-        FutureBuilder<bool>(
-          future: budgetProvider.hasRolloverAvailable(
-            _previousMonthKey,
-            transactions,
+        // Rollover button (reads pre-computed bool)
+        if (budgetProvider.hasRolloverAvailable && budgets.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _RolloverButton(
+              onTap: () async {
+                await budgetProvider.applyRollover(
+                  _previousMonthKey,
+                  _monthKey,
+                  transactions,
+                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Roulement appliqué avec succès')),
+                  );
+                }
+              },
+            ),
           ),
-          builder: (context, snap) {
-            if (snap.data == true && budgets.isNotEmpty) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _RolloverButton(
-                  onTap: () async {
-                    await budgetProvider.applyRollover(
-                      _previousMonthKey,
-                      _monthKey,
-                      transactions,
-                    );
-                  },
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
 
         // Budget cards
         if (budgets.isEmpty)
@@ -105,11 +120,7 @@ class _BudgetsListViewState extends State<BudgetsListView> {
         else
           ...budgets.map((b) {
             final cat = categoryMap[b.categoryId];
-            final spent = budgetProvider.spentForCategory(
-              b.categoryId,
-              _monthKey,
-              transactions,
-            );
+            final spent = spentMap[b.categoryId] ?? 0.0;
             return _BudgetCard(
               budget: b,
               category: cat,
@@ -119,9 +130,18 @@ class _BudgetsListViewState extends State<BudgetsListView> {
             );
           }),
 
+        // Unbudgeted section
+        if (unbudgetedTotal > 0) ...[
+          const SizedBox(height: 20),
+          _UnbudgetedSection(
+            total: unbudgetedTotal,
+            byCategory: unbudgetedMap,
+            categoryMap: categoryMap,
+          ),
+        ],
+
         const SizedBox(height: 16),
 
-        // Add budget button
         Center(
           child: TextButton.icon(
             onPressed: () => _showAddBudget(context, categories, budgets),
@@ -698,12 +718,16 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet> {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) return;
 
+    final catName = _selectedCategory!.name;
     context.read<BudgetProvider>().addBudget(Budget(
           categoryId: _selectedCategory!.id!,
           amount: amount,
           month: widget.month,
         ));
     Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Budget "$catName" ajouté')),
+    );
   }
 }
 
@@ -784,6 +808,9 @@ class _BudgetEditSheetState extends State<_BudgetEditSheet> {
                         .read<BudgetProvider>()
                         .deleteBudget(widget.budget.id!);
                     Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Budget supprimé')),
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: ext.expense,
@@ -803,6 +830,9 @@ class _BudgetEditSheetState extends State<_BudgetEditSheet> {
                           widget.budget.copyWith(amount: amount),
                         );
                     Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Budget mis à jour')),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -989,6 +1019,91 @@ class _BudgetDetailSheet extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────── Unbudgeted Section ───────────────
+
+class _UnbudgetedSection extends StatelessWidget {
+  final double total;
+  final Map<int, double> byCategory;
+  final Map<int?, Category> categoryMap;
+
+  const _UnbudgetedSection({
+    required this.total,
+    required this.byCategory,
+    required this.categoryMap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ext.warning.withAlpha(isDark ? 20 : 10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: ext.warning.withAlpha(isDark ? 40 : 25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: ext.warning, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Dépenses non budgétées',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: ext.warning,
+                  ),
+                ),
+              ),
+              Text(
+                '${_fmt(total)} BIF',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: ext.warning,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...byCategory.entries.map((e) {
+            final cat = categoryMap[e.key];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Text(cat?.icon ?? '📌', style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      cat?.name ?? 'Catégorie #${e.key}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                  Text(
+                    '${_fmt(e.value)} BIF',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 }
