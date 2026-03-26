@@ -3,7 +3,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = 'ayawe.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   static sqlite.Database? _database;
 
@@ -23,7 +23,6 @@ class DatabaseHelper {
   }
 
   Future<void> _onCreate(sqlite.Database db, int version) async {
-    // Create accounts table
     await db.execute('''
       CREATE TABLE accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +33,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create categories table
     await db.execute('''
       CREATE TABLE categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,22 +42,22 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create transactions table
     await db.execute('''
       CREATE TABLE transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER NOT NULL,
+        to_account_id INTEGER,
         category_id INTEGER NOT NULL,
         amount REAL NOT NULL,
         date TEXT NOT NULL,
         description TEXT NOT NULL DEFAULT '',
         transaction_type TEXT NOT NULL,
         FOREIGN KEY (account_id) REFERENCES accounts (id),
+        FOREIGN KEY (to_account_id) REFERENCES accounts (id),
         FOREIGN KEY (category_id) REFERENCES categories (id)
       )
     ''');
 
-    // Create goals table
     await db.execute('''
       CREATE TABLE goals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +68,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Insert predefined categories
     await _insertPredefinedCategories(db);
   }
 
@@ -106,12 +103,10 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(sqlite.Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < newVersion) {
-      await db.execute('DROP TABLE IF EXISTS transactions');
-      await db.execute('DROP TABLE IF EXISTS goals');
-      await db.execute('DROP TABLE IF EXISTS categories');
-      await db.execute('DROP TABLE IF EXISTS accounts');
-      await _onCreate(db, newVersion);
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN to_account_id INTEGER',
+      );
     }
   }
 

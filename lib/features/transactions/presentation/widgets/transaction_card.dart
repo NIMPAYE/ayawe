@@ -9,6 +9,7 @@ class TransactionCard extends StatelessWidget {
   final Transaction transaction;
   final Category? category;
   final String currency;
+  final String? toAccountName;
   final VoidCallback? onTap;
 
   const TransactionCard({
@@ -16,6 +17,7 @@ class TransactionCard extends StatelessWidget {
     required this.transaction,
     this.category,
     this.currency = 'BIF',
+    this.toAccountName,
     this.onTap,
   });
 
@@ -24,9 +26,30 @@ class TransactionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final ext = context.appTheme;
     final isDark = theme.brightness == Brightness.dark;
+    final isTransfer = transaction.transactionType == TransactionType.TRANSFER;
     final isExpense = transaction.transactionType == TransactionType.OUTGOING;
-    final color = isExpense ? ext.expense : ext.income;
-    final sign = isExpense ? '-' : '+';
+
+    final Color color;
+    final String sign;
+    final String iconFallback;
+
+    if (isTransfer) {
+      color = theme.colorScheme.primary;
+      sign = '~';
+      iconFallback = '🔄';
+    } else if (isExpense) {
+      color = ext.expense;
+      sign = '-';
+      iconFallback = '📤';
+    } else {
+      color = ext.income;
+      sign = '+';
+      iconFallback = '📥';
+    }
+
+    final subtitle = isTransfer && toAccountName != null
+        ? 'vers $toAccountName'
+        : DateFormat('dd MMM yyyy').format(transaction.date);
 
     return GestureDetector(
       onTap: onTap,
@@ -42,7 +65,6 @@ class TransactionCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Category icon
             Container(
               width: 46,
               height: 46,
@@ -53,14 +75,16 @@ class TransactionCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Text(
-                category?.icon ?? (isExpense ? '📤' : '📥'),
-                style: const TextStyle(fontSize: 20),
-              ),
+              child: isTransfer
+                  ? Icon(Icons.swap_horiz_rounded,
+                      color: theme.colorScheme.primary, size: 22)
+                  : Text(
+                      category?.icon ?? iconFallback,
+                      style: const TextStyle(fontSize: 20),
+                    ),
             ),
             const SizedBox(width: 14),
 
-            // Description + date
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,21 +99,30 @@ class TransactionCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    DateFormat('dd MMM yyyy').format(transaction.date),
+                    subtitle,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: ext.textTertiary,
                     ),
                   ),
+                  if (isTransfer) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      DateFormat('dd MMM yyyy').format(transaction.date),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: ext.textTertiary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: 10),
 
-            // Amount
             Column(
-              crossAxisAlignment: .end,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (category != null) ...[
+                if (!isTransfer && category != null) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 6,
@@ -107,8 +140,27 @@ class TransactionCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(height: 4),
                 ],
+                if (isTransfer)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(isDark ? 30 : 15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Transfert',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                if (isTransfer) const SizedBox(height: 4),
                 Text(
                   '$currency $sign${_fmt(transaction.amount)}',
                   style: GoogleFonts.poppins(

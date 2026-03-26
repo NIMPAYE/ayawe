@@ -8,6 +8,7 @@ import '../../../transactions/domain/entities/transaction.dart';
 import '../../../transactions/presentation/providers/transaction_provider.dart';
 import '../../../categories/domain/entities/category.dart';
 import '../../../categories/presentation/providers/category_provider.dart';
+import '../providers/account_provider.dart';
 
 class AccountDetailScreen extends StatelessWidget {
   final Account account;
@@ -38,17 +39,22 @@ class AccountDetailScreen extends StatelessWidget {
 
     final allTransactions = context.watch<TransactionProvider>().transactions;
     final categories = context.watch<CategoryProvider>().categories;
+    final allAccounts = context.watch<AccountProvider>().accounts;
+
+    final accountMap = {for (final a in allAccounts) a.id: a};
 
     final transactions = allTransactions
-        .where((t) => t.accountId == account.id)
+        .where((t) =>
+            t.accountId == account.id || t.toAccountId == account.id)
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
 
     final categoryMap = {for (final c in categories) c.id: c};
 
-    // Category breakdown
+    // Category breakdown (exclude transfers from category totals)
     final categoryTotals = <int, double>{};
     for (final t in transactions) {
+      if (t.transactionType == TransactionType.TRANSFER) continue;
       categoryTotals[t.categoryId] =
           (categoryTotals[t.categoryId] ?? 0) + t.amount;
     }
@@ -60,6 +66,16 @@ class AccountDetailScreen extends StatelessWidget {
         .fold(0.0, (sum, t) => sum + t.amount);
     final totalReceived = transactions
         .where((t) => t.transactionType == TransactionType.INCOMING)
+        .fold(0.0, (sum, t) => sum + t.amount);
+    final totalTransferOut = transactions
+        .where((t) =>
+            t.transactionType == TransactionType.TRANSFER &&
+            t.accountId == account.id)
+        .fold(0.0, (sum, t) => sum + t.amount);
+    final totalTransferIn = transactions
+        .where((t) =>
+            t.transactionType == TransactionType.TRANSFER &&
+            t.toAccountId == account.id)
         .fold(0.0, (sum, t) => sum + t.amount);
 
     return Scaffold(
@@ -77,16 +93,16 @@ class AccountDetailScreen extends StatelessWidget {
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
               children: [
-                // ── Account info card ──
                 _AccountHeader(
                   account: account,
                   accent: accent,
                   totalReceived: totalReceived,
                   totalSpent: totalSpent,
+                  totalTransferIn: totalTransferIn,
+                  totalTransferOut: totalTransferOut,
                 ),
                 const SizedBox(height: 24),
 
-                // ── Category breakdown ──
                 if (sortedCategories.isNotEmpty) ...[
                   Text('Répartition par catégorie',
                       style: theme.textTheme.titleLarge),
@@ -106,14 +122,25 @@ class AccountDetailScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                 ],
 
-                // ── Transactions list ──
                 Text('Historique', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 12),
-                ...transactions.map((t) => _TransactionTile(
-                      transaction: t,
-                      category: categoryMap[t.categoryId],
-                      currency: account.currencySymbol,
-                    )),
+                ...transactions.map((t) {
+                  String? peerAccountName;
+                  bool isTransferIncoming = false;
+                  if (t.transactionType == TransactionType.TRANSFER) {
+                    isTransferIncoming = t.toAccountId == account.id;
+                    final peerId =
+                        isTransferIncoming ? t.accountId : t.toAccountId;
+                    peerAccountName = accountMap[peerId]?.name;
+                  }
+                  return _TransactionTile(
+                    transaction: t,
+                    category: categoryMap[t.categoryId],
+                    currency: account.currencySymbol,
+                    currentAccountId: account.id!,
+                    peerAccountName: peerAccountName,
+                  );
+                }),
               ],
             ),
     );
@@ -166,12 +193,16 @@ class _AccountHeader extends StatelessWidget {
   final Color accent;
   final double totalReceived;
   final double totalSpent;
+  final double totalTransferIn;
+  final double totalTransferOut;
 
   const _AccountHeader({
     required this.account,
     required this.accent,
     required this.totalReceived,
     required this.totalSpent,
+    required this.totalTransferIn,
+    required this.totalTransferOut,
   });
 
   @override
@@ -191,7 +222,6 @@ class _AccountHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Account type + balance
           Row(
             children: [
               Container(
@@ -236,7 +266,6 @@ class _AccountHeader extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          // Income / Expense row
           Row(
             children: [
               Expanded(
@@ -260,6 +289,33 @@ class _AccountHeader extends StatelessWidget {
               ),
             ],
           ),
+
+          if (totalTransferIn > 0 || totalTransferOut > 0) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _MiniStat(
+                    label: 'Reçu (transfert)',
+                    amount: totalTransferIn,
+                    currency: account.currencySymbol,
+                    color: theme.colorScheme.primary,
+                    icon: Icons.call_received_rounded,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _MiniStat(
+                    label: 'Envoyé (transfert)',
+                    amount: totalTransferOut,
+                    currency: account.currencySymbol,
+                    color: theme.colorScheme.tertiary,
+                    icon: Icons.call_made_rounded,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -423,11 +479,15 @@ class _TransactionTile extends StatelessWidget {
   final Transaction transaction;
   final Category? category;
   final String currency;
+  final int currentAccountId;
+  final String? peerAccountName;
 
   const _TransactionTile({
     required this.transaction,
     this.category,
     required this.currency,
+    required this.currentAccountId,
+    this.peerAccountName,
   });
 
   @override
@@ -435,9 +495,43 @@ class _TransactionTile extends StatelessWidget {
     final theme = Theme.of(context);
     final ext = context.appTheme;
     final isDark = theme.brightness == Brightness.dark;
-    final isExpense = transaction.transactionType == TransactionType.OUTGOING;
-    final color = isExpense ? ext.expense : ext.income;
-    final bgColor = isExpense ? ext.expenseSurface : ext.incomeSurface;
+
+    final isTransfer = transaction.transactionType == TransactionType.TRANSFER;
+    final bool isTransferIncoming =
+        isTransfer && transaction.toAccountId == currentAccountId;
+
+    final Color color;
+    final Color bgColor;
+    final String sign;
+    final String iconText;
+    Widget? iconWidget;
+
+    if (isTransfer) {
+      color = theme.colorScheme.primary;
+      bgColor = color.withAlpha(isDark ? 25 : 15);
+      sign = isTransferIncoming ? '+' : '-';
+      iconText = '🔄';
+      iconWidget = Icon(Icons.swap_horiz_rounded, color: color, size: 20);
+    } else {
+      final isExpense =
+          transaction.transactionType == TransactionType.OUTGOING;
+      color = isExpense ? ext.expense : ext.income;
+      bgColor = isExpense ? ext.expenseSurface : ext.incomeSurface;
+      sign = isExpense ? '-' : '+';
+      iconText = category?.icon ?? (isExpense ? '📤' : '📥');
+      iconWidget = null;
+    }
+
+    final subtitleParts = <String>[];
+    if (isTransfer && peerAccountName != null) {
+      subtitleParts.add(isTransferIncoming
+          ? 'de $peerAccountName'
+          : 'vers $peerAccountName');
+    }
+    if (!isTransfer && category != null) {
+      subtitleParts.add(category!.name);
+    }
+    subtitleParts.add(DateFormat('dd MMM yyyy').format(transaction.date));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -451,7 +545,6 @@ class _TransactionTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Category icon
           Container(
             width: 42,
             height: 42,
@@ -460,13 +553,10 @@ class _TransactionTile extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: Text(
-              category?.icon ?? (isExpense ? '📤' : '📥'),
-              style: const TextStyle(fontSize: 18),
-            ),
+            child: iconWidget ??
+                Text(iconText, style: const TextStyle(fontSize: 18)),
           ),
           const SizedBox(width: 12),
-          // Description + category + date
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,42 +568,19 @@ class _TransactionTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Row(
-                  children: [
-                    if (category != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withAlpha(isDark ? 30 : 15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          category!.name,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: color,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      DateFormat('dd MMM yyyy').format(transaction.date),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: ext.textTertiary,
-                      ),
-                    ),
-                  ],
+                Text(
+                  subtitleParts.join(' · '),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: ext.textTertiary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // Amount
           Text(
-            '${isExpense ? '-' : '+'} ${_fmt(transaction.amount)} $currency',
+            '$sign ${_fmt(transaction.amount)} $currency',
             style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w700,

@@ -31,8 +31,8 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
     final db = await _databaseHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'transactions',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
+      where: 'account_id = ? OR to_account_id = ?',
+      whereArgs: [accountId, accountId],
       orderBy: 'date DESC',
     );
     return maps.map((map) => TransactionModel.fromMap(map)).toList();
@@ -61,11 +61,22 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
     await db.transaction((txn) async {
       txId = await txn.insert('transactions', transaction.toMap());
 
-      final sign = transaction.transactionType == TransactionType.OUTGOING ? -1 : 1;
-      await txn.rawUpdate(
-        'UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?',
-        [transaction.amount * sign, transaction.accountId],
-      );
+      if (transaction.transactionType == TransactionType.TRANSFER) {
+        await txn.rawUpdate(
+          'UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?',
+          [transaction.amount, transaction.accountId],
+        );
+        await txn.rawUpdate(
+          'UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?',
+          [transaction.amount, transaction.toAccountId],
+        );
+      } else {
+        final sign = transaction.transactionType == TransactionType.OUTGOING ? -1 : 1;
+        await txn.rawUpdate(
+          'UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?',
+          [transaction.amount * sign, transaction.accountId],
+        );
+      }
     });
 
     return txId;

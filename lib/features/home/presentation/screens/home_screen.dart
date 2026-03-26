@@ -12,6 +12,7 @@ import '../../../accounts/presentation/providers/account_provider.dart';
 import '../../../categories/presentation/providers/category_provider.dart';
 import '../../../goals/domain/entities/goal.dart';
 import '../../../transactions/domain/entities/transaction.dart';
+import '../../../transactions/presentation/screens/add_transaction_screen.dart';
 import '../../../transactions/presentation/widgets/transaction_card.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -366,7 +367,14 @@ class _QuickActions extends StatelessWidget {
         _QuickActionItem(
           icon: Icons.swap_horiz_rounded,
           label: 'Transférer',
-          onTap: () => Navigator.pushNamed(context, '/add_transaction'),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AddTransactionScreen(
+                initialType: TransactionType.TRANSFER,
+              ),
+            ),
+          ),
         ),
         _QuickActionItem(
           icon: Icons.category_rounded,
@@ -625,10 +633,15 @@ class _TransactionsList extends StatelessWidget {
     return Column(
       children: recent.map((t) {
         final account = accountMap[t.accountId];
+        String? toAccountName;
+        if (t.isTransfer && t.toAccountId != null) {
+          toAccountName = accountMap[t.toAccountId]?.name;
+        }
         return TransactionCard(
           transaction: t,
           category: categoryMap[t.categoryId],
           currency: account?.currencySymbol ?? 'BIF',
+          toAccountName: toAccountName,
         );
       }).toList(),
     );

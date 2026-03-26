@@ -12,7 +12,12 @@ import '../../../accounts/domain/entities/account.dart';
 import '../../../accounts/presentation/providers/account_provider.dart';
 
 class AddTransactionScreen extends StatefulWidget {
-  const AddTransactionScreen({super.key});
+  final TransactionType initialType;
+
+  const AddTransactionScreen({
+    super.key,
+    this.initialType = TransactionType.OUTGOING,
+  });
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -23,8 +28,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
 
-  TransactionType _type = TransactionType.OUTGOING;
+  late TransactionType _type = widget.initialType;
   Account? _selectedAccount;
+  Account? _selectedToAccount;
   Category? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
   bool _isSaving = false;
@@ -35,6 +41,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _amountController.dispose();
     super.dispose();
   }
+
+  bool get _isTransfer => _type == TransactionType.TRANSFER;
 
   CategoryType get _matchingCategoryType =>
       _type == TransactionType.OUTGOING
@@ -52,17 +60,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         .where((c) => c.type == _matchingCategoryType)
         .toList();
 
-    if (_selectedAccount != null &&
-        !accounts.contains(_selectedAccount)) {
+    if (_selectedAccount != null && !accounts.contains(_selectedAccount)) {
       _selectedAccount = null;
+    }
+    if (_selectedToAccount != null && !accounts.contains(_selectedToAccount)) {
+      _selectedToAccount = null;
     }
     if (_selectedCategory != null &&
         !filteredCategories.contains(_selectedCategory)) {
       _selectedCategory = null;
     }
 
-    final isExpense = _type == TransactionType.OUTGOING;
-    final accentColor = isExpense ? ext.expense : ext.income;
+    final Color accentColor;
+    if (_isTransfer) {
+      accentColor = theme.colorScheme.primary;
+    } else {
+      accentColor = _type == TransactionType.OUTGOING ? ext.expense : ext.income;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -90,18 +104,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           label: 'Dépense',
                           icon: Icons.arrow_upward_rounded,
                           color: ext.expense,
-                          isSelected: isExpense,
+                          isSelected: _type == TransactionType.OUTGOING,
                           onTap: () => _setType(TransactionType.OUTGOING),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: _TypeChip(
                           label: 'Revenu',
                           icon: Icons.arrow_downward_rounded,
                           color: ext.income,
-                          isSelected: !isExpense,
+                          isSelected: _type == TransactionType.INCOMING,
                           onTap: () => _setType(TransactionType.INCOMING),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _TypeChip(
+                          label: 'Transfert',
+                          icon: Icons.swap_horiz_rounded,
+                          color: theme.colorScheme.primary,
+                          isSelected: _isTransfer,
+                          onTap: () => _setType(TransactionType.TRANSFER),
                         ),
                       ),
                     ],
@@ -140,141 +164,153 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Account ──
-                  Text('Compte', style: theme.textTheme.titleSmall),
-                  const SizedBox(height: 8),
-                  if (accounts.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: ext.expenseSurface,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning_amber_rounded,
-                              color: ext.warning, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Aucun compte. Créez-en un d\'abord.',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    DropdownButtonFormField<Account>(
-                      initialValue: _selectedAccount,
-                      isExpanded: true,
-                      decoration: const InputDecoration(),
-                      hint: const Text('Sélectionnez un compte'),
-                      items: accounts.map((a) {
-                        return DropdownMenuItem(
-                          value: a,
-                          child: Row(
-                            children: [
-                              Icon(
-                                _accountIcon(a.type),
-                                size: 18,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  a.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text(
-                                '${_fmt(a.currentBalance)} ${a.currencySymbol}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: ext.textTertiary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                  // ── Account(s) ──
+                  if (_isTransfer) ...[
+                    _buildAccountDropdown(
+                      label: 'Compte source',
+                      hint: 'D\'où part l\'argent',
+                      value: _selectedAccount,
+                      accounts: accounts,
+                      theme: theme,
+                      ext: ext,
                       onChanged: (v) => setState(() => _selectedAccount = v),
                       validator: (v) =>
-                          v == null ? 'Sélectionnez un compte' : null,
+                          v == null ? 'Sélectionnez le compte source' : null,
                     ),
-                  const SizedBox(height: 24),
-
-                  // ── Category ──
-                  Text('Catégorie', style: theme.textTheme.titleSmall),
-                  const SizedBox(height: 8),
-                  if (filteredCategories.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: ext.emptyState,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Aucune catégorie disponible pour ce type.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: ext.textTertiary,
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.colorScheme.primary.withAlpha(25),
+                        ),
+                        child: Icon(
+                          Icons.arrow_downward_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 22,
                         ),
                       ),
-                    )
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: filteredCategories.map((cat) {
-                        final selected = _selectedCategory == cat;
-                        return GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedCategory = cat),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? accentColor.withAlpha(isDark ? 50 : 25)
-                                  : isDark
-                                      ? Colors.white.withAlpha(10)
-                                      : ext.emptyState,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
+                    ),
+                    const SizedBox(height: 16),
+                    _buildAccountDropdown(
+                      label: 'Compte destination',
+                      hint: 'Où va l\'argent',
+                      value: _selectedToAccount,
+                      accounts: accounts,
+                      theme: theme,
+                      ext: ext,
+                      onChanged: (v) =>
+                          setState(() => _selectedToAccount = v),
+                      validator: (v) {
+                        if (v == null) {
+                          return 'Sélectionnez le compte destination';
+                        }
+                        if (_selectedAccount != null &&
+                            v.id == _selectedAccount!.id) {
+                          return 'Source et destination doivent différer';
+                        }
+                        return null;
+                      },
+                    ),
+                  ] else ...[
+                    Text('Compte', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    if (accounts.isEmpty)
+                      _buildNoAccountWarning(ext, theme)
+                    else
+                      DropdownButtonFormField<Account>(
+                        initialValue: _selectedAccount,
+                        isExpanded: true,
+                        decoration: const InputDecoration(),
+                        hint: const Text('Sélectionnez un compte'),
+                        items: accounts.map((a) {
+                          return DropdownMenuItem(
+                            value: a,
+                            child: _buildAccountRow(a, theme, ext),
+                          );
+                        }).toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedAccount = v),
+                        validator: (v) =>
+                            v == null ? 'Sélectionnez un compte' : null,
+                      ),
+                  ],
+                  const SizedBox(height: 24),
+
+                  // ── Category (hidden for transfer) ──
+                  if (!_isTransfer) ...[
+                    Text('Catégorie', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    if (filteredCategories.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: ext.emptyState,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Aucune catégorie disponible pour ce type.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: ext.textTertiary,
+                          ),
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: filteredCategories.map((cat) {
+                          final selected = _selectedCategory == cat;
+                          return GestureDetector(
+                            onTap: () =>
+                                setState(() => _selectedCategory = cat),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
                                 color: selected
-                                    ? accentColor
+                                    ? accentColor.withAlpha(isDark ? 50 : 25)
                                     : isDark
-                                        ? Colors.white.withAlpha(15)
-                                        : ext.border,
-                                width: selected ? 1.5 : 1,
+                                        ? Colors.white.withAlpha(10)
+                                        : ext.emptyState,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: selected
+                                      ? accentColor
+                                      : isDark
+                                          ? Colors.white.withAlpha(15)
+                                          : ext.border,
+                                  width: selected ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(cat.icon,
+                                      style: const TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    cat.name,
+                                    style:
+                                        theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: selected
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                      color: selected ? accentColor : null,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(cat.icon,
-                                    style: const TextStyle(fontSize: 16)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  cat.name,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: selected
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                    color: selected
-                                        ? accentColor
-                                        : null,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  const SizedBox(height: 24),
+                          );
+                        }).toList(),
+                      ),
+                    const SizedBox(height: 24),
+                  ],
 
                   // ── Description ──
                   Text('Description', style: theme.textTheme.titleSmall),
@@ -282,8 +318,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   TextFormField(
                     controller: _descriptionController,
                     textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      hintText: 'Ex: Taxi centre-ville',
+                    decoration: InputDecoration(
+                      hintText: _isTransfer
+                          ? 'Ex: Vers Lumicash'
+                          : 'Ex: Taxi centre-ville',
                     ),
                     validator: (v) => (v == null || v.isEmpty)
                         ? 'Entrez une description'
@@ -352,11 +390,94 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
+  Widget _buildAccountDropdown({
+    required String label,
+    required String hint,
+    required Account? value,
+    required List<Account> accounts,
+    required ThemeData theme,
+    required AppThemeExtension ext,
+    required ValueChanged<Account?> onChanged,
+    required FormFieldValidator<Account> validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.titleSmall),
+        const SizedBox(height: 8),
+        if (accounts.isEmpty)
+          _buildNoAccountWarning(ext, theme)
+        else
+          DropdownButtonFormField<Account>(
+            initialValue: value,
+            isExpanded: true,
+            decoration: const InputDecoration(),
+            hint: Text(hint),
+            items: accounts.map((a) {
+              return DropdownMenuItem(
+                value: a,
+                child: _buildAccountRow(a, theme, ext),
+              );
+            }).toList(),
+            onChanged: onChanged,
+            validator: validator,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAccountRow(Account a, ThemeData theme, AppThemeExtension ext) {
+    return Row(
+      children: [
+        Icon(
+          _accountIcon(a.type),
+          size: 18,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(a.name, overflow: TextOverflow.ellipsis),
+        ),
+        Text(
+          '${_fmt(a.currentBalance)} ${a.currencySymbol}',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: ext.textTertiary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNoAccountWarning(AppThemeExtension ext, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ext.expenseSurface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: ext.warning, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Aucun compte. Créez-en un d\'abord.',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _setType(TransactionType type) {
     if (_type == type) return;
     setState(() {
       _type = type;
       _selectedCategory = null;
+      if (type != TransactionType.TRANSFER) {
+        _selectedToAccount = null;
+      }
     });
   }
 
@@ -373,20 +494,40 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedAccount == null || _selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez remplir tous les champs'),
-        ),
-      );
-      return;
+    if (_isTransfer) {
+      if (_selectedAccount == null || _selectedToAccount == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sélectionnez les deux comptes'),
+          ),
+        );
+        return;
+      }
+      if (_selectedAccount!.id == _selectedToAccount!.id) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Les comptes source et destination doivent différer'),
+          ),
+        );
+        return;
+      }
+    } else {
+      if (_selectedAccount == null || _selectedCategory == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Veuillez remplir tous les champs'),
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSaving = true);
 
     final transaction = Transaction(
       accountId: _selectedAccount!.id!,
-      categoryId: _selectedCategory!.id ?? 0,
+      toAccountId: _isTransfer ? _selectedToAccount!.id! : null,
+      categoryId: _isTransfer ? 0 : (_selectedCategory!.id ?? 0),
       amount: double.parse(_amountController.text),
       date: _selectedDate,
       description: _descriptionController.text,
@@ -476,7 +617,7 @@ class _TypeChip extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
                 color: isSelected ? color : ext.textTertiary,
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
           ],

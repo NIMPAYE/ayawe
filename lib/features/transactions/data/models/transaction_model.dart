@@ -4,6 +4,7 @@ class TransactionModel extends Transaction {
   const TransactionModel({
     super.id,
     required super.accountId,
+    super.toAccountId,
     required super.categoryId,
     required super.amount,
     required super.date,
@@ -15,6 +16,7 @@ class TransactionModel extends Transaction {
     return TransactionModel(
       id: entity.id,
       accountId: entity.accountId,
+      toAccountId: entity.toAccountId,
       categoryId: entity.categoryId,
       amount: entity.amount,
       date: entity.date,
@@ -27,6 +29,7 @@ class TransactionModel extends Transaction {
     return TransactionModel(
       id: map['id'],
       accountId: map['account_id'],
+      toAccountId: map['to_account_id'],
       categoryId: map['category_id'],
       amount: map['amount']?.toDouble() ?? 0.0,
       date: DateTime.parse(map['date']),
@@ -41,6 +44,7 @@ class TransactionModel extends Transaction {
     return {
       'id': id,
       'account_id': accountId,
+      'to_account_id': toAccountId,
       'category_id': categoryId,
       'amount': amount,
       'date': date.toIso8601String(),
@@ -53,6 +57,7 @@ class TransactionModel extends Transaction {
     return Transaction(
       id: id,
       accountId: accountId,
+      toAccountId: toAccountId,
       categoryId: categoryId,
       amount: amount,
       date: date,

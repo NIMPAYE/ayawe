@@ -103,10 +103,15 @@ class TransactionsScreen extends StatelessWidget {
                     // Transaction cards
                     ...items.map((t) {
                       final account = accountMap[t.accountId];
+                      String? toAccountName;
+                      if (t.isTransfer && t.toAccountId != null) {
+                        toAccountName = accountMap[t.toAccountId]?.name;
+                      }
                       return TransactionCard(
                         transaction: t,
                         category: categoryMap[t.categoryId],
                         currency: account?.currencySymbol ?? 'BIF',
+                        toAccountName: toAccountName,
                       );
                     }),
                   ],
