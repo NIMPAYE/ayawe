@@ -3,7 +3,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = 'ayawe.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
 
   static sqlite.Database? _database;
 
@@ -64,7 +64,26 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         target_amount REAL NOT NULL,
         current_amount REAL NOT NULL DEFAULT 0.0,
-        deadline TEXT NOT NULL
+        deadline TEXT NOT NULL,
+        icon TEXT NOT NULL DEFAULT '🎯',
+        color INTEGER NOT NULL DEFAULT ${0xFF7C4DFF},
+        image_path TEXT,
+        currency TEXT NOT NULL DEFAULT 'BIF'
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE goal_contributions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        goal_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,
+        transaction_id INTEGER,
+        amount REAL NOT NULL,
+        date TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE,
+        FOREIGN KEY (account_id) REFERENCES accounts(id),
+        FOREIGN KEY (transaction_id) REFERENCES transactions(id)
       )
     ''');
 
@@ -159,6 +178,26 @@ class DatabaseHelper {
           is_active INTEGER NOT NULL DEFAULT 1,
           FOREIGN KEY (account_id) REFERENCES accounts (id),
           FOREIGN KEY (category_id) REFERENCES categories (id)
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute("ALTER TABLE goals ADD COLUMN icon TEXT NOT NULL DEFAULT '🎯'");
+      await db.execute('ALTER TABLE goals ADD COLUMN color INTEGER NOT NULL DEFAULT ${0xFF7C4DFF}');
+      await db.execute('ALTER TABLE goals ADD COLUMN image_path TEXT');
+      await db.execute("ALTER TABLE goals ADD COLUMN currency TEXT NOT NULL DEFAULT 'BIF'");
+      await db.execute('''
+        CREATE TABLE goal_contributions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          goal_id INTEGER NOT NULL,
+          account_id INTEGER NOT NULL,
+          transaction_id INTEGER,
+          amount REAL NOT NULL,
+          date TEXT NOT NULL,
+          note TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts(id),
+          FOREIGN KEY (transaction_id) REFERENCES transactions(id)
         )
       ''');
     }

@@ -7,6 +7,10 @@ class GoalModel extends Goal {
     required super.targetAmount,
     required super.currentAmount,
     required super.deadline,
+    super.icon,
+    super.color,
+    super.imagePath,
+    super.currency,
   });
 
   factory GoalModel.fromEntity(Goal entity) {
@@ -16,6 +20,10 @@ class GoalModel extends Goal {
       targetAmount: entity.targetAmount,
       currentAmount: entity.currentAmount,
       deadline: entity.deadline,
+      icon: entity.icon,
+      color: entity.color,
+      imagePath: entity.imagePath,
+      currency: entity.currency,
     );
   }
 
@@ -26,6 +34,10 @@ class GoalModel extends Goal {
       targetAmount: map['target_amount']?.toDouble() ?? 0.0,
       currentAmount: map['current_amount']?.toDouble() ?? 0.0,
       deadline: DateTime.parse(map['deadline']),
+      icon: map['icon'] ?? '🎯',
+      color: map['color'] ?? 0xFF7C4DFF,
+      imagePath: map['image_path'],
+      currency: map['currency'] ?? 'BIF',
     );
   }
 
@@ -36,6 +48,10 @@ class GoalModel extends Goal {
       'target_amount': targetAmount,
       'current_amount': currentAmount,
       'deadline': deadline.toIso8601String(),
+      'icon': icon,
+      'color': color,
+      'image_path': imagePath,
+      'currency': currency,
     };
   }
 
@@ -46,6 +62,10 @@ class GoalModel extends Goal {
       targetAmount: targetAmount,
       currentAmount: currentAmount,
       deadline: deadline,
+      icon: icon,
+      color: color,
+      imagePath: imagePath,
+      currency: currency,
     );
   }
 }

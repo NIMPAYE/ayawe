@@ -817,7 +817,7 @@ class _GoalCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${_formatAmount(goal.currentAmount)} / ${_formatAmount(goal.targetAmount)} BIF',
+                '${_formatAmount(goal.currentAmount)} / ${_formatAmount(goal.targetAmount)} ${goal.currency}',
                 style: theme.textTheme.bodySmall,
               ),
               Text(

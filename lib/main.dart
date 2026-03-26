@@ -45,7 +45,7 @@ class AyaweApp extends StatelessWidget {
               TransactionProvider(di.sl(), di.sl())..loadTransactions(),
         ),
         ChangeNotifierProvider<GoalProvider>(
-          create: (context) => GoalProvider(di.sl())..loadGoals(),
+          create: (context) => GoalProvider(di.sl(), di.sl())..loadGoals(),
         ),
         ChangeNotifierProvider<CategoryProvider>(
           create: (context) => CategoryProvider(di.sl())..loadCategories(),

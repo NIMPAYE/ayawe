@@ -16,6 +16,9 @@ import '../../features/categories/domain/repositories/category_repository.dart';
 import '../../features/goals/data/datasources/goal_local_datasource.dart';
 import '../../features/goals/data/repositories/goal_repository_impl.dart';
 import '../../features/goals/domain/repositories/goal_repository.dart';
+import '../../features/goals/data/datasources/goal_contribution_local_datasource.dart';
+import '../../features/goals/data/repositories/goal_contribution_repository_impl.dart';
+import '../../features/goals/domain/repositories/goal_contribution_repository.dart';
 import '../../features/budgets/data/datasources/budget_local_datasource.dart';
 import '../../features/budgets/data/repositories/budget_repository_impl.dart';
 import '../../features/budgets/domain/repositories/budget_repository.dart';
@@ -71,6 +74,14 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<GoalRepository>(
     () => GoalRepositoryImpl(sl()),
+  );
+
+  // Goal Contributions
+  sl.registerLazySingleton<GoalContributionLocalDataSource>(
+    () => GoalContributionLocalDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<GoalContributionRepository>(
+    () => GoalContributionRepositoryImpl(sl()),
   );
 
   // Budgets
