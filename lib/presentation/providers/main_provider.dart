@@ -4,23 +4,31 @@ import '../../features/accounts/presentation/providers/account_provider.dart';
 import '../../features/transactions/presentation/providers/transaction_provider.dart';
 import '../../features/goals/presentation/providers/goal_provider.dart';
 import '../../features/categories/presentation/providers/category_provider.dart';
+import '../../features/budgets/presentation/providers/budget_provider.dart';
+import '../../features/budgets/presentation/providers/recurring_transaction_provider.dart';
 
 class MainProvider extends ChangeNotifier {
   final AccountProvider accountProvider;
   final TransactionProvider transactionProvider;
   final GoalProvider goalProvider;
   final CategoryProvider categoryProvider;
+  final BudgetProvider budgetProvider;
+  final RecurringTransactionProvider recurringTransactionProvider;
 
   MainProvider({
     required this.accountProvider,
     required this.transactionProvider,
     required this.goalProvider,
     required this.categoryProvider,
+    required this.budgetProvider,
+    required this.recurringTransactionProvider,
   }) {
     accountProvider.addListener(_onChildChanged);
     transactionProvider.addListener(_onChildChanged);
     goalProvider.addListener(_onChildChanged);
     categoryProvider.addListener(_onChildChanged);
+    budgetProvider.addListener(_onChildChanged);
+    recurringTransactionProvider.addListener(_onChildChanged);
   }
 
   void _onChildChanged() {
@@ -33,6 +41,8 @@ class MainProvider extends ChangeNotifier {
     transactionProvider.removeListener(_onChildChanged);
     goalProvider.removeListener(_onChildChanged);
     categoryProvider.removeListener(_onChildChanged);
+    budgetProvider.removeListener(_onChildChanged);
+    recurringTransactionProvider.removeListener(_onChildChanged);
     super.dispose();
   }
 
@@ -40,13 +50,17 @@ class MainProvider extends ChangeNotifier {
       accountProvider.isLoading || 
       transactionProvider.isLoading || 
       goalProvider.isLoading || 
-      categoryProvider.isLoading;
+      categoryProvider.isLoading ||
+      budgetProvider.isLoading ||
+      recurringTransactionProvider.isLoading;
 
   String? get error => 
       accountProvider.error ?? 
       transactionProvider.error ?? 
       goalProvider.error ?? 
-      categoryProvider.error;
+      categoryProvider.error ??
+      budgetProvider.error ??
+      recurringTransactionProvider.error;
 
   // Computed properties
   Map<Currency, double> get balanceByCurrency => accountProvider.balanceByCurrency;
@@ -60,6 +74,8 @@ class MainProvider extends ChangeNotifier {
       transactionProvider.loadTransactions(),
       goalProvider.loadGoals(),
       categoryProvider.loadCategories(),
+      budgetProvider.loadBudgets(),
+      recurringTransactionProvider.loadRecurring(),
     ]);
   }
 

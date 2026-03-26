@@ -16,6 +16,12 @@ import '../../features/categories/domain/repositories/category_repository.dart';
 import '../../features/goals/data/datasources/goal_local_datasource.dart';
 import '../../features/goals/data/repositories/goal_repository_impl.dart';
 import '../../features/goals/domain/repositories/goal_repository.dart';
+import '../../features/budgets/data/datasources/budget_local_datasource.dart';
+import '../../features/budgets/data/repositories/budget_repository_impl.dart';
+import '../../features/budgets/domain/repositories/budget_repository.dart';
+import '../../features/budgets/data/datasources/recurring_transaction_local_datasource.dart';
+import '../../features/budgets/data/repositories/recurring_transaction_repository_impl.dart';
+import '../../features/budgets/domain/repositories/recurring_transaction_repository.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -65,5 +71,21 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<GoalRepository>(
     () => GoalRepositoryImpl(sl()),
+  );
+
+  // Budgets
+  sl.registerLazySingleton<BudgetLocalDataSource>(
+    () => BudgetLocalDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<BudgetRepository>(
+    () => BudgetRepositoryImpl(sl()),
+  );
+
+  // Recurring Transactions
+  sl.registerLazySingleton<RecurringTransactionLocalDataSource>(
+    () => RecurringTransactionLocalDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<RecurringTransactionRepository>(
+    () => RecurringTransactionRepositoryImpl(sl()),
   );
 }

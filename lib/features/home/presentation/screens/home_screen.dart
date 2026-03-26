@@ -14,6 +14,7 @@ import '../../../goals/domain/entities/goal.dart';
 import '../../../transactions/domain/entities/transaction.dart';
 import '../../../transactions/presentation/screens/add_transaction_screen.dart';
 import '../../../transactions/presentation/widgets/transaction_card.dart';
+import '../../../budgets/presentation/providers/recurring_transaction_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -98,7 +99,9 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _BalanceCard(provider: mainProvider),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  const _RecurringAlert(),
+                  const SizedBox(height: 12),
                   const _QuickActions(),
                   const SizedBox(height: 24),
                   _SectionHeader(
@@ -341,6 +344,81 @@ class _BalanceStat extends StatelessWidget {
               color: Colors.white,
               fontSize: 15,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────── Recurring Alert ───────────────
+
+class _RecurringAlert extends StatelessWidget {
+  const _RecurringAlert();
+
+  @override
+  Widget build(BuildContext context) {
+    final rtProvider = context.watch<RecurringTransactionProvider>();
+    final dueSoon = rtProvider.dueSoonItems;
+    if (dueSoon.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final item = dueSoon.first;
+    final isOverdue = item.isOverdue;
+    final color = isOverdue ? ext.expense : ext.warning;
+    final daysText = item.daysUntilDue == 0
+        ? "aujourd'hui"
+        : item.daysUntilDue < 0
+            ? 'en retard de ${-item.daysUntilDue}j'
+            : 'dans ${item.daysUntilDue} jour${item.daysUntilDue > 1 ? 's' : ''}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withAlpha(isDark ? 25 : 12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withAlpha(isDark ? 50 : 30)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isOverdue ? Icons.warning_amber_rounded : Icons.notifications_active_rounded,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: item.description,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' · $daysText',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (dueSoon.length > 1)
+                    TextSpan(
+                      text: ' (+${dueSoon.length - 1} autres)',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: ext.textTertiary,
+                      ),
+                    ),
+                ],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

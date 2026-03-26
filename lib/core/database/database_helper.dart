@@ -3,7 +3,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = 'ayawe.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
 
   static sqlite.Database? _database;
 
@@ -68,6 +68,33 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE budgets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        month TEXT NOT NULL,
+        rollover_amount REAL NOT NULL DEFAULT 0.0,
+        FOREIGN KEY (category_id) REFERENCES categories (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE recurring_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL,
+        category_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        transaction_type TEXT NOT NULL,
+        frequency TEXT NOT NULL,
+        next_due_date TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY (account_id) REFERENCES accounts (id),
+        FOREIGN KEY (category_id) REFERENCES categories (id)
+      )
+    ''');
+
     await _insertPredefinedCategories(db);
   }
 
@@ -107,6 +134,33 @@ class DatabaseHelper {
       await db.execute(
         'ALTER TABLE transactions ADD COLUMN to_account_id INTEGER',
       );
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE budgets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          category_id INTEGER NOT NULL,
+          amount REAL NOT NULL,
+          month TEXT NOT NULL,
+          rollover_amount REAL NOT NULL DEFAULT 0.0,
+          FOREIGN KEY (category_id) REFERENCES categories (id)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE recurring_transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          account_id INTEGER NOT NULL,
+          category_id INTEGER NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          transaction_type TEXT NOT NULL,
+          frequency TEXT NOT NULL,
+          next_due_date TEXT NOT NULL,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          FOREIGN KEY (account_id) REFERENCES accounts (id),
+          FOREIGN KEY (category_id) REFERENCES categories (id)
+        )
+      ''');
     }
   }
 

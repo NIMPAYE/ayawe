@@ -16,6 +16,8 @@ import 'features/accounts/presentation/providers/account_provider.dart';
 import 'features/transactions/presentation/providers/transaction_provider.dart';
 import 'features/goals/presentation/providers/goal_provider.dart';
 import 'features/categories/presentation/providers/category_provider.dart';
+import 'features/budgets/presentation/providers/budget_provider.dart';
+import 'features/budgets/presentation/providers/recurring_transaction_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,12 +50,22 @@ class AyaweApp extends StatelessWidget {
         ChangeNotifierProvider<CategoryProvider>(
           create: (context) => CategoryProvider(di.sl())..loadCategories(),
         ),
+        ChangeNotifierProvider<BudgetProvider>(
+          create: (context) => BudgetProvider(di.sl())..loadBudgets(),
+        ),
+        ChangeNotifierProvider<RecurringTransactionProvider>(
+          create: (context) =>
+              RecurringTransactionProvider(di.sl())..loadRecurring(),
+        ),
         ChangeNotifierProvider<MainProvider>(
           create: (context) => MainProvider(
             accountProvider: context.read<AccountProvider>(),
             transactionProvider: context.read<TransactionProvider>(),
             goalProvider: context.read<GoalProvider>(),
             categoryProvider: context.read<CategoryProvider>(),
+            budgetProvider: context.read<BudgetProvider>(),
+            recurringTransactionProvider:
+                context.read<RecurringTransactionProvider>(),
           ),
         ),
       ],
