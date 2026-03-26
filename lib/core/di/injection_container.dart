@@ -25,6 +25,12 @@ import '../../features/budgets/domain/repositories/budget_repository.dart';
 import '../../features/budgets/data/datasources/recurring_transaction_local_datasource.dart';
 import '../../features/budgets/data/repositories/recurring_transaction_repository_impl.dart';
 import '../../features/budgets/domain/repositories/recurring_transaction_repository.dart';
+import '../../features/debts/data/datasources/debt_local_datasource.dart';
+import '../../features/debts/data/datasources/debt_payment_local_datasource.dart';
+import '../../features/debts/data/repositories/debt_repository_impl.dart';
+import '../../features/debts/data/repositories/debt_payment_repository_impl.dart';
+import '../../features/debts/domain/repositories/debt_repository.dart';
+import '../../features/debts/domain/repositories/debt_payment_repository.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -98,5 +104,21 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<RecurringTransactionRepository>(
     () => RecurringTransactionRepositoryImpl(sl()),
+  );
+
+  // Debts
+  sl.registerLazySingleton<DebtLocalDataSource>(
+    () => DebtLocalDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<DebtRepository>(
+    () => DebtRepositoryImpl(sl()),
+  );
+
+  // Debt Payments
+  sl.registerLazySingleton<DebtPaymentLocalDataSource>(
+    () => DebtPaymentLocalDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<DebtPaymentRepository>(
+    () => DebtPaymentRepositoryImpl(sl()),
   );
 }

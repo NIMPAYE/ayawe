@@ -79,4 +79,9 @@ class PredefinedCategories {
     const Category(name: 'Loan Repayment', type: CategoryType.INCOME, icon: '💰'),
     const Category(name: 'Other Income', type: CategoryType.INCOME, icon: '📌'),
   ];
+
+  static List<Category> get debt => [
+    const Category(name: 'Prêt accordé', type: CategoryType.EXPENSE, icon: '🤝'),
+    const Category(name: 'Remboursement dette', type: CategoryType.EXPENSE, icon: '💸'),
+  ];
 }

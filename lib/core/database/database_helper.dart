@@ -3,7 +3,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = 'ayawe.db';
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
 
   static sqlite.Database? _database;
 
@@ -114,6 +114,40 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE debts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        person_name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        total_amount REAL NOT NULL,
+        remaining_amount REAL NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'BIF',
+        description TEXT NOT NULL DEFAULT '',
+        created_date TEXT NOT NULL,
+        due_date TEXT,
+        is_settled INTEGER NOT NULL DEFAULT 0,
+        account_id INTEGER NOT NULL,
+        transaction_id INTEGER,
+        FOREIGN KEY (account_id) REFERENCES accounts(id),
+        FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE debt_payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        debt_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,
+        transaction_id INTEGER,
+        amount REAL NOT NULL,
+        date TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE CASCADE,
+        FOREIGN KEY (account_id) REFERENCES accounts(id),
+        FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+      )
+    ''');
+
     await _insertPredefinedCategories(db);
   }
 
@@ -139,11 +173,20 @@ class DatabaseHelper {
       {'name': 'Other Income', 'type': 'INCOME', 'icon': '📌'},
     ];
 
+    final debtCategories = [
+      {'name': 'Prêt accordé', 'type': 'EXPENSE', 'icon': '🤝'},
+      {'name': 'Remboursement dette', 'type': 'EXPENSE', 'icon': '💸'},
+    ];
+
     for (final category in expenses) {
       await db.insert('categories', category);
     }
 
     for (final category in income) {
+      await db.insert('categories', category);
+    }
+
+    for (final category in debtCategories) {
       await db.insert('categories', category);
     }
   }
@@ -200,6 +243,42 @@ class DatabaseHelper {
           FOREIGN KEY (transaction_id) REFERENCES transactions(id)
         )
       ''');
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE debts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          person_name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          total_amount REAL NOT NULL,
+          remaining_amount REAL NOT NULL,
+          currency TEXT NOT NULL DEFAULT 'BIF',
+          description TEXT NOT NULL DEFAULT '',
+          created_date TEXT NOT NULL,
+          due_date TEXT,
+          is_settled INTEGER NOT NULL DEFAULT 0,
+          account_id INTEGER NOT NULL,
+          transaction_id INTEGER,
+          FOREIGN KEY (account_id) REFERENCES accounts(id),
+          FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE debt_payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          debt_id INTEGER NOT NULL,
+          account_id INTEGER NOT NULL,
+          transaction_id INTEGER,
+          amount REAL NOT NULL,
+          date TEXT NOT NULL,
+          note TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts(id),
+          FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+        )
+      ''');
+      await db.insert('categories', {'name': 'Prêt accordé', 'type': 'EXPENSE', 'icon': '🤝'});
+      await db.insert('categories', {'name': 'Remboursement dette', 'type': 'EXPENSE', 'icon': '💸'});
     }
   }
 

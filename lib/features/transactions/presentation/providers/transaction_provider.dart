@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/transaction.dart';
 import '../../domain/usecases/get_transactions_usecase.dart';
 import '../../domain/usecases/create_transaction_usecase.dart';
+import '../../../../core/services/notification_service.dart';
 
 class TransactionProvider extends ChangeNotifier {
   final GetTransactionsUseCase _getTransactionsUseCase;
@@ -40,6 +41,14 @@ class TransactionProvider extends ChangeNotifier {
     return total;
   }
 
+  bool get hasTransactionToday {
+    final now = DateTime.now();
+    return _transactions.any((t) =>
+        t.date.year == now.year &&
+        t.date.month == now.month &&
+        t.date.day == now.day);
+  }
+
   Future<void> loadTransactions() async {
     _setLoading(true);
     _clearError();
@@ -57,6 +66,7 @@ class TransactionProvider extends ChangeNotifier {
     try {
       await _createTransactionUseCase(transaction);
       await loadTransactions();
+      NotificationService.onTransactionRecorded();
     } catch (e) {
       _setError('Error adding transaction: $e');
     }

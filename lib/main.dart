@@ -18,11 +18,15 @@ import 'features/goals/presentation/providers/goal_provider.dart';
 import 'features/categories/presentation/providers/category_provider.dart';
 import 'features/budgets/presentation/providers/budget_provider.dart';
 import 'features/budgets/presentation/providers/recurring_transaction_provider.dart';
+import 'features/debts/presentation/providers/debt_provider.dart';
+import 'features/debts/presentation/screens/debts_screen.dart';
+import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('fr');
   await di.init();
+  await NotificationService.init();
   runApp(const AyaweApp());
 }
 
@@ -57,6 +61,9 @@ class AyaweApp extends StatelessWidget {
           create: (context) =>
               RecurringTransactionProvider(di.sl())..loadRecurring(),
         ),
+        ChangeNotifierProvider<DebtProvider>(
+          create: (context) => DebtProvider(di.sl(), di.sl())..loadDebts(),
+        ),
         ChangeNotifierProvider<MainProvider>(
           create: (context) => MainProvider(
             accountProvider: context.read<AccountProvider>(),
@@ -66,6 +73,7 @@ class AyaweApp extends StatelessWidget {
             budgetProvider: context.read<BudgetProvider>(),
             recurringTransactionProvider:
                 context.read<RecurringTransactionProvider>(),
+            debtProvider: context.read<DebtProvider>(),
           ),
         ),
       ],
@@ -85,6 +93,7 @@ class AyaweApp extends StatelessWidget {
               '/accounts': (context) => const AccountsScreen(),
               '/goals': (context) => const GoalsScreen(),
               '/categories': (context) => const CategoriesScreen(),
+              '/debts': (context) => const DebtsScreen(),
             },
           );
         },

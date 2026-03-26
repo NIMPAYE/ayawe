@@ -15,6 +15,8 @@ import '../../../transactions/domain/entities/transaction.dart';
 import '../../../transactions/presentation/screens/add_transaction_screen.dart';
 import '../../../transactions/presentation/widgets/transaction_card.dart';
 import '../../../budgets/presentation/providers/recurring_transaction_provider.dart';
+import '../../../debts/domain/entities/debt.dart';
+import '../../../debts/presentation/providers/debt_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -101,6 +103,8 @@ class HomeScreen extends StatelessWidget {
                   _BalanceCard(provider: mainProvider),
                   const SizedBox(height: 12),
                   const _RecurringAlert(),
+                  const SizedBox(height: 12),
+                  const _DebtAlert(),
                   const SizedBox(height: 12),
                   const _QuickActions(),
                   const SizedBox(height: 24),
@@ -273,6 +277,49 @@ class _BalanceCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (provider.totalReceivable > 0 ||
+                        provider.totalPayable > 0) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.account_balance_rounded,
+                                  color: Colors.white.withAlpha(160),
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Patrimoine net',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white.withAlpha(160),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${_formatAmount((balances[primary] ?? 0) + provider.totalReceivable - provider.totalPayable)} ${primary.symbol}',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -427,6 +474,93 @@ class _RecurringAlert extends StatelessWidget {
   }
 }
 
+// ─────────────── Debt Alert ───────────────
+
+class _DebtAlert extends StatelessWidget {
+  const _DebtAlert();
+
+  @override
+  Widget build(BuildContext context) {
+    final debtProvider = context.watch<DebtProvider>();
+    final dueSoon = debtProvider.dueSoonDebts;
+    if (dueSoon.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final ext = context.appTheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final item = dueSoon.first;
+    final isOverdue = item.isOverdue;
+    final color = isOverdue ? ext.expense : ext.warning;
+    final daysText = item.daysUntilDue == null
+        ? ''
+        : item.daysUntilDue == 0
+            ? "aujourd'hui"
+            : item.daysUntilDue! < 0
+                ? 'en retard de ${-item.daysUntilDue!}j'
+                : 'dans ${item.daysUntilDue} jour${item.daysUntilDue! > 1 ? 's' : ''}';
+
+    final label = item.type == DebtType.LENT
+        ? '${item.personName} doit rembourser'
+        : 'Rembourser ${item.personName}';
+
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/debts'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withAlpha(isDark ? 25 : 12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withAlpha(isDark ? 50 : 30)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isOverdue
+                  ? Icons.warning_amber_rounded
+                  : Icons.notifications_active_rounded,
+              color: color,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: label,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (daysText.isNotEmpty)
+                      TextSpan(
+                        text: ' · $daysText',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    if (dueSoon.length > 1)
+                      TextSpan(
+                        text: ' (+${dueSoon.length - 1} autres)',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: ext.textTertiary,
+                        ),
+                      ),
+                  ],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ─────────────── Quick Actions ───────────────
 
 class _QuickActions extends StatelessWidget {
@@ -463,6 +597,11 @@ class _QuickActions extends StatelessWidget {
           icon: Icons.flag_rounded,
           label: 'Objectifs',
           onTap: () => Navigator.pushNamed(context, '/goals'),
+        ),
+        _QuickActionItem(
+          icon: Icons.handshake_rounded,
+          label: 'Dettes',
+          onTap: () => Navigator.pushNamed(context, '/debts'),
         ),
       ],
     );
