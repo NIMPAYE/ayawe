@@ -35,14 +35,14 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          IconButton(
+          /*IconButton(
             icon: const Icon(Icons.notifications_none_rounded),
             onPressed: () {},
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => context.read<MainProvider>().refreshAll(),
-          ),
+          ),*/
         ],
       ),
       body: Consumer<MainProvider>(
@@ -167,7 +167,7 @@ class _BalanceCard extends StatelessWidget {
         ),
         child: SizedBox(
           width: MediaQuery.of(context).size.width,
-          height: 190,
+          height: 222,
           child: Stack(
             children: [
               Positioned(
@@ -764,7 +764,6 @@ class _AccountCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: accent.withAlpha(isDark ? 50 : 30),
                   shape: BoxShape.circle,
-                  border: Border.all(color: theme.primaryColorLight,width: 0.4)
                 ),
                 child: Icon(
                   _typeIcons[account.type] ?? Icons.wallet,
