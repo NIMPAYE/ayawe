@@ -38,11 +38,11 @@ class HomeScreen extends StatelessWidget {
           /*IconButton(
             icon: const Icon(Icons.notifications_none_rounded),
             onPressed: () {},
-          ),
+          ),*/
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => context.read<MainProvider>().refreshAll(),
-          ),*/
+          ),
         ],
       ),
       body: Consumer<MainProvider>(
@@ -785,7 +785,7 @@ class _AccountCard extends StatelessWidget {
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, 
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   spacing: 4,
@@ -818,7 +818,7 @@ class _AccountCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-         
+
         ],
       ),
     );
