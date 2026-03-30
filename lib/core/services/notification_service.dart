@@ -23,7 +23,7 @@ class NotificationService {
     const settings = InitializationSettings(
       android: androidSettings,
       iOS: darwinSettings,
-      macOS: darwinSettings,
+      //macOS: darwinSettings,
     );
 
     await _plugin.initialize(settings);
