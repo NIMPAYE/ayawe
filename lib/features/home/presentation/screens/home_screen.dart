@@ -27,29 +27,6 @@ class HomeScreen extends StatelessWidget {
     final ext = context.appTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'ayāwe',
-          style: GoogleFonts.pacifico(
-            fontWeight: FontWeight.w500,
-            fontSize: 28,
-            letterSpacing: 1,
-            wordSpacing: 8
-          ),
-          
-        ),
-       
-        actions: [
-          /*IconButton(
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () {},
-          ),*/
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => context.read<MainProvider>().refreshAll(),
-          ),
-        ],
-      ),
       body: Consumer<MainProvider>(
         builder: (context, mainProvider, child) {
           if (mainProvider.isLoading) {
@@ -99,42 +76,67 @@ class HomeScreen extends StatelessWidget {
           return RefreshIndicator(
             color: theme.colorScheme.primary,
             onRefresh: () async => mainProvider.refreshAll(),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 130),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _BalanceCard(provider: mainProvider),
-                  const SizedBox(height: 12),
-                  const _RecurringAlert(),
-                  const SizedBox(height: 12),
-                  const _DebtAlert(),
-                  const SizedBox(height: 12),
-                  const _QuickActions(),
-                  const SizedBox(height: 24),
-                  _SectionHeader(
-                    title: 'Mes Comptes',
-                    onViewAll: () => Navigator.pushNamed(context, '/accounts'),
-                  ),
-                  const SizedBox(height: 0),
-                  _AccountsList(accounts: accountProvider.accounts),
-                  const SizedBox(height: 16),
-                  _SectionHeader(
-                    title: 'Transactions Récentes',
-                    onViewAll: () =>
-                        Navigator.pushNamed(context, '/transactions'),
-                  ),
-                  const SizedBox(height: 8),
-                  _TransactionsList(
-                    transactions: transactionProvider.transactions,
-                  ),
-                  const SizedBox(height: 28),
-                  _SectionHeader(title: 'Mes Objectifs'),
-                  const SizedBox(height: 12),
-                  _GoalsList(goals: goalProvider.goals),
-                ],
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
               ),
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  floating: true,
+                  title: Text(
+                    'ayāwe',
+                    style: GoogleFonts.pacifico(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 28,
+                      letterSpacing: 1,
+                      wordSpacing: 8,
+                    ),
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.refresh_rounded),
+                      onPressed: () => mainProvider.refreshAll(),
+                    ),
+                  ],
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 130),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      _BalanceCard(provider: mainProvider),
+                      const SizedBox(height: 12),
+                      const _RecurringAlert(),
+                      const SizedBox(height: 12),
+                      const _DebtAlert(),
+                      const SizedBox(height: 12),
+                      const _QuickActions(),
+                      const SizedBox(height: 24),
+                      _SectionHeader(
+                        title: 'Mes Comptes',
+                        onViewAll: () =>
+                            Navigator.pushNamed(context, '/accounts'),
+                      ),
+                      const SizedBox(height: 0),
+                      _AccountsList(accounts: accountProvider.accounts),
+                      const SizedBox(height: 16),
+                      _SectionHeader(
+                        title: 'Transactions Récentes',
+                        onViewAll: () =>
+                            Navigator.pushNamed(context, '/transactions'),
+                      ),
+                      const SizedBox(height: 8),
+                      _TransactionsList(
+                        transactions: transactionProvider.transactions,
+                      ),
+                      const SizedBox(height: 28),
+                      _SectionHeader(title: 'Mes Objectifs'),
+                      const SizedBox(height: 12),
+                      _GoalsList(goals: goalProvider.goals),
+                    ]),
+                  ),
+                ),
+              ],
             ),
           );
         },
