@@ -29,11 +29,16 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Ayawe',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+          'ayāwe',
+          style: GoogleFonts.pacifico(
+            fontWeight: FontWeight.w500,
+            fontSize: 28,
+            letterSpacing: 1,
+            wordSpacing: 8
           ),
+          
         ),
+       
         actions: [
           /*IconButton(
             icon: const Icon(Icons.notifications_none_rounded),
