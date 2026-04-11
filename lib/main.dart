@@ -20,6 +20,7 @@ import 'features/budgets/presentation/providers/budget_provider.dart';
 import 'features/budgets/presentation/providers/recurring_transaction_provider.dart';
 import 'features/debts/presentation/providers/debt_provider.dart';
 import 'features/debts/presentation/screens/debts_screen.dart';
+import 'features/stats/presentation/providers/stats_provider.dart';
 import 'core/services/notification_service.dart';
 
 void main() async {
@@ -63,6 +64,9 @@ class AyaweApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<DebtProvider>(
           create: (context) => DebtProvider(di.sl(), di.sl())..loadDebts(),
+        ),
+        ChangeNotifierProvider<StatsProvider>(
+          create: (_) => StatsProvider(),
         ),
         ChangeNotifierProvider<MainProvider>(
           create: (context) => MainProvider(

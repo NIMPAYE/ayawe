@@ -167,7 +167,7 @@ class _BalanceCard extends StatelessWidget {
         ),
         child: SizedBox(
           width: MediaQuery.of(context).size.width,
-          height: 222,
+          height: provider.totalReceivable > 0 || provider.totalPayable > 0 ? 222 : 180,
           child: Stack(
             children: [
               Positioned(

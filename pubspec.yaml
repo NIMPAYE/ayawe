@@ -59,6 +59,9 @@ dependencies:
   
   # Galerie photo
   image_picker: ^1.1.2
+
+  # Graphiques (écran Statistiques : cash flow, catégories, tendances)
+  fl_chart: ^1.2.0
   
   # Notifications locales
   flutter_local_notifications: ^18.0.1

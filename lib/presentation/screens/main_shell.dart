@@ -35,19 +35,17 @@ class _MainShellState extends State<MainShell> {
         children: _screens,
       ),
       extendBody: true,
-      floatingActionButton: _CenterFAB(
+      /* floatingActionButton: _CenterFAB(
         onTap: () => Navigator.pushNamed(context, '/add_transaction'),
-      ),
+      ), */
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
         color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
         elevation: 8,
         shadowColor: Colors.black.withAlpha(40),
         clipBehavior: Clip.antiAlias,
         child: SizedBox(
-          height: 64,
+          height: 60,
           child: Row(
             children: [
               _NavItem(
@@ -62,7 +60,10 @@ class _MainShellState extends State<MainShell> {
                 isSelected: _currentIndex == 1,
                 onTap: () => _onTabTapped(1),
               ),
-              const Spacer(),
+              //const Spacer(),
+              _CenterFAB(
+                onTap: () => Navigator.pushNamed(context, '/add_transaction'),
+              ),
               _NavItem(
                 icon: FontAwesomeIcons.bullseye,
                 label: 'Budgets',
@@ -97,11 +98,12 @@ class _CenterFAB extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 60,
-      height: 60,
+      width: 45,
+      height: 45,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient:Theme.of(context).brightness==Brightness.dark?  AppColors.primaryGradient : null,
+        shape: BoxShape.rectangle,
+        borderRadius: BorderRadius.circular(5),
+        gradient:Theme.of(context).brightness==Brightness.dark?  AppColors.primaryGradient : AppColors.primaryGradient,
         color: Theme.of(context).brightness==Brightness.light? Colors.black : null ,
         boxShadow: [
           BoxShadow(

@@ -69,6 +69,13 @@ lib/
 - **Recent Activity**: Latest transactions and goal progress
 - **Quick Actions**: Fast access to common operations
 
+### Statistics (`features/stats`)
+- **Cash flow**: Last six calendar months of income vs expenses; **transfers are excluded** from totals to avoid double counting.
+- **Category report**: Year selector and expense-category selector; total for the year and per-month bar chart (12 months).
+- **Trends**: Month-over-month comparison for expense categories (current vs previous calendar month), with French insight copy and noise thresholds in `StatsAggregator`.
+- **Presentation**: `StatsScreen` uses `fl_chart`, `StatsFuturisticCard`, and `StatsProvider` for tab index, selected year, and selected category.
+- **Domain**: Pure aggregation in `stats_aggregator.dart` and DTOs in `stats_models.dart` (unit-tested).
+
 ## State Management
 
 The application uses Provider pattern with feature-specific providers:
@@ -78,6 +85,7 @@ The application uses Provider pattern with feature-specific providers:
 - **GoalProvider**: Manages goals state and operations
 - **CategoryProvider**: Manages category state and operations
 - **MainProvider**: Orchestrates all providers and provides computed properties
+- **StatsProvider**: Statistics UI state (tab, year, category) for the Stats screen
 
 ## Database
 
