@@ -7,6 +7,7 @@ import '../../features/categories/presentation/providers/category_provider.dart'
 import '../../features/budgets/presentation/providers/budget_provider.dart';
 import '../../features/budgets/presentation/providers/recurring_transaction_provider.dart';
 import '../../features/debts/presentation/providers/debt_provider.dart';
+import '../../features/debts/domain/entities/debt.dart';
 import '../../core/services/notification_service.dart';
 
 class MainProvider extends ChangeNotifier {
@@ -17,6 +18,8 @@ class MainProvider extends ChangeNotifier {
   final BudgetProvider budgetProvider;
   final RecurringTransactionProvider recurringTransactionProvider;
   final DebtProvider debtProvider;
+
+  bool _notificationsScheduled = false;
 
   MainProvider({
     required this.accountProvider,
@@ -38,6 +41,30 @@ class MainProvider extends ChangeNotifier {
 
   void _onChildChanged() {
     notifyListeners();
+    _scheduleNotificationsIfReady();
+  }
+
+  void _scheduleNotificationsIfReady() {
+    if (_notificationsScheduled || isLoading) return;
+    _notificationsScheduled = true;
+
+    NotificationService.scheduleDailyReminder(
+      hasTransactionToday: transactionProvider.hasTransactionToday,
+    );
+    _rescheduleDebtReminders();
+  }
+
+  Future<void> _rescheduleDebtReminders() async {
+    for (final debt in debtProvider.debts) {
+      if (debt.dueDate != null && !debt.isSettled) {
+        await NotificationService.scheduleDebtReminder(
+          debtId: debt.id!,
+          personName: debt.personName,
+          isLent: debt.type == DebtType.LENT,
+          dueDate: debt.dueDate!,
+        );
+      }
+    }
   }
 
   @override
@@ -91,6 +118,7 @@ class MainProvider extends ChangeNotifier {
     NotificationService.scheduleDailyReminder(
       hasTransactionToday: transactionProvider.hasTransactionToday,
     );
+    _rescheduleDebtReminders();
   }
 
   void refreshAll() {
