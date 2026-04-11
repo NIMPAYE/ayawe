@@ -146,7 +146,12 @@ abstract final class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         centerTitle: false,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemStatusBarContrastEnforced: false,
+        ),
       ),
 
       cardTheme: CardThemeData(
@@ -291,7 +296,12 @@ abstract final class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         centerTitle: false,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemStatusBarContrastEnforced: false,
+        ),
       ),
 
       cardTheme: CardThemeData(

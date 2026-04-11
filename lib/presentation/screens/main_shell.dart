@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/theme/app_colors.dart';
@@ -26,18 +27,18 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusStyle = Theme.of(context).appBarTheme.systemOverlayStyle ??
+        (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark);
 
-    return Scaffold(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: statusStyle,
+      child: Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+          index: _currentIndex,
+          children: _screens,
+        ),
       extendBody: true,
-      /* floatingActionButton: _CenterFAB(
-        onTap: () => Navigator.pushNamed(context, '/add_transaction'),
-      ), */
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
@@ -60,7 +61,6 @@ class _MainShellState extends State<MainShell> {
                 isSelected: _currentIndex == 1,
                 onTap: () => _onTabTapped(1),
               ),
-              //const Spacer(),
               _CenterFAB(
                 onTap: () => Navigator.pushNamed(context, '/add_transaction'),
               ),
@@ -79,6 +79,7 @@ class _MainShellState extends State<MainShell> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
