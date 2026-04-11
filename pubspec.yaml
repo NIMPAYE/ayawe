@@ -60,6 +60,9 @@ dependencies:
   # Galerie photo
   image_picker: ^1.1.2
 
+  # Stockage local des préférences
+  shared_preferences: ^2.2.3
+
   # Graphiques (écran Statistiques : cash flow, catégories, tendances)
   fl_chart: ^1.2.0
   

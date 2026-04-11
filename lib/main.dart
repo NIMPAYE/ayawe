@@ -41,7 +41,7 @@ class AyaweApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<ThemeProvider>(
-          create: (_) => ThemeProvider(),
+          create: (_) => ThemeProvider(di.sl()),
         ),
         ChangeNotifierProvider<AccountProvider>(
           create: (context) =>
