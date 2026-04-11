@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../authentication/presentation/providers/security_provider.dart';
+import '../../../authentication/presentation/screens/setup_pin_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -12,6 +14,7 @@ class ProfileScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final ext = context.appTheme;
     final themeProvider = context.watch<ThemeProvider>();
+    final securityProvider = context.watch<SecurityProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -94,6 +97,44 @@ class ProfileScreen extends StatelessWidget {
             subtitle: 'BIF',
             trailing: const Icon(Icons.chevron_right_rounded),
           ),
+
+          const SizedBox(height: 24),
+          Text(
+            'SÉCURITÉ',
+            style: theme.textTheme.labelSmall?.copyWith(
+              letterSpacing: 1.2,
+              color: ext.textTertiary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _SettingsTile(
+            icon: FontAwesomeIcons.shieldHalved,
+            title: 'Verrouillage de l\'appli',
+            trailing: Switch.adaptive(
+              value: securityProvider.isSecurityEnabled,
+              onChanged: (value) {
+                if (value) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SetupPinScreen()),
+                  );
+                } else {
+                  securityProvider.toggleSecurity(false, null);
+                }
+              },
+              activeColor: theme.colorScheme.primary,
+            ),
+          ),
+          if (securityProvider.hasPin)
+            _SettingsTile(
+              icon: FontAwesomeIcons.fingerprint,
+              title: 'Empreinte digitale',
+              trailing: Switch.adaptive(
+                value: securityProvider.isBiometricEnabled,
+                onChanged: (value) => securityProvider.toggleBiometrics(value),
+                activeColor: theme.colorScheme.primary,
+              ),
+            ),
 
           const SizedBox(height: 24),
           Text(

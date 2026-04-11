@@ -32,6 +32,7 @@ import '../../features/debts/data/repositories/debt_payment_repository_impl.dart
 import '../../features/debts/domain/repositories/debt_repository.dart';
 import '../../features/debts/domain/repositories/debt_payment_repository.dart';
 import '../services/preference_service.dart';
+import '../services/security_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final GetIt sl = GetIt.instance;
@@ -41,6 +42,7 @@ Future<void> init() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerLazySingleton<SharedPreferences>(() => sharedPreferences);
   sl.registerLazySingleton<PreferenceService>(() => PreferenceService(sl()));
+  sl.registerLazySingleton<SecurityService>(() => SecurityService());
   
   sl.registerLazySingleton<DatabaseHelper>(() => DatabaseHelper());
 

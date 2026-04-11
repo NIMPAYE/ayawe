@@ -99,11 +99,11 @@ class _CenterFAB extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 45,
-      height: 45,
+      width: 50,
+      height: 50,
       decoration: BoxDecoration(
         shape: BoxShape.rectangle,
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(15),
         gradient:Theme.of(context).brightness==Brightness.dark?  AppColors.primaryGradient : AppColors.primaryGradient,
         color: Theme.of(context).brightness==Brightness.light? Colors.black : null ,
         boxShadow: [

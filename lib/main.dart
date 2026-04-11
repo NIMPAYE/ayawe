@@ -23,6 +23,8 @@ import 'features/debts/presentation/providers/debt_provider.dart';
 import 'features/debts/presentation/screens/debts_screen.dart';
 import 'features/stats/presentation/providers/stats_provider.dart';
 import 'core/services/notification_service.dart';
+import 'features/authentication/presentation/providers/security_provider.dart';
+import 'features/authentication/presentation/screens/lock_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,6 +44,9 @@ class AyaweApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<ThemeProvider>(
           create: (_) => ThemeProvider(di.sl()),
+        ),
+        ChangeNotifierProvider<SecurityProvider>(
+          create: (_) => SecurityProvider(di.sl()),
         ),
         ChangeNotifierProvider<AccountProvider>(
           create: (context) =>
@@ -83,8 +88,8 @@ class AyaweApp extends StatelessWidget {
           ),
         ),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
+      child: Consumer2<ThemeProvider, SecurityProvider>(
+        builder: (context, themeProvider, securityProvider, _) {
           return MaterialApp(
             title: 'Ayawe',
             debugShowCheckedModeBanner: false,
@@ -92,6 +97,15 @@ class AyaweApp extends StatelessWidget {
             darkTheme: AppTheme.dark,
             themeMode: themeProvider.themeMode,
             home: const MainShell(),
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  if (child != null) child,
+                  if (securityProvider.isLocked)
+                    const LockScreen(),
+                ],
+              );
+            },
             routes: {
               '/add_transaction': (context) => const AddTransactionScreen(),
               '/transactions': (context) => const TransactionsScreen(),
