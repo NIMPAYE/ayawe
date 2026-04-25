@@ -109,16 +109,12 @@ class GoalProvider extends ChangeNotifier {
         transactionType: TransactionType.OUTGOING,
       );
 
-      await transactionProvider.addTransaction(tx);
-
-      // Get the ID of the transaction we just created (latest)
-      final allTx = transactionProvider.transactions;
-      final createdTx = allTx.isNotEmpty ? allTx.first : null;
+      final createdTxId = await transactionProvider.addTransaction(tx);
 
       final contribution = GoalContribution(
         goalId: goal.id!,
         accountId: accountId,
-        transactionId: createdTx?.id,
+        transactionId: createdTxId,
         amount: amount,
         date: DateTime.now(),
         note: note,

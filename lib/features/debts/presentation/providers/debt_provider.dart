@@ -89,10 +89,7 @@ class DebtProvider extends ChangeNotifier {
         transactionType: txType,
       );
 
-      await transactionProvider.addTransaction(tx);
-
-      final allTx = transactionProvider.transactions;
-      final createdTx = allTx.isNotEmpty ? allTx.first : null;
+      final createdTxId = await transactionProvider.addTransaction(tx);
 
       final debt = Debt(
         personName: personName,
@@ -104,7 +101,7 @@ class DebtProvider extends ChangeNotifier {
         createdDate: DateTime.now(),
         dueDate: dueDate,
         accountId: accountId,
-        transactionId: createdTx?.id,
+        transactionId: createdTxId,
       );
 
       await _debtRepository.create(debt);
@@ -149,11 +146,14 @@ class DebtProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteDebt(int id) async {
+  Future<void> deleteDebt(int id, {MainProvider? mainProvider}) async {
     try {
       await NotificationService.cancelDebtReminder(id);
       await _debtRepository.delete(id);
       await loadDebts();
+      if (mainProvider != null) {
+        await mainProvider.loadAllData();
+      }
     } catch (e) {
       _setError('Erreur suppression dette: $e');
     }
@@ -196,15 +196,12 @@ class DebtProvider extends ChangeNotifier {
         transactionType: txType,
       );
 
-      await transactionProvider.addTransaction(tx);
-
-      final allTx = transactionProvider.transactions;
-      final createdTx = allTx.isNotEmpty ? allTx.first : null;
+      final createdTxId = await transactionProvider.addTransaction(tx);
 
       final payment = DebtPayment(
         debtId: debt.id!,
         accountId: accountId,
-        transactionId: createdTx?.id,
+        transactionId: createdTxId,
         amount: amount,
         date: DateTime.now(),
         note: note,
@@ -238,7 +235,7 @@ class DebtProvider extends ChangeNotifier {
           (debt.remainingAmount + payment.amount).clamp(0.0, debt.totalAmount);
       await _debtRepository.update(debt.copyWith(
         remainingAmount: newRemaining,
-        isSettled: false,
+        isSettled: newRemaining <= 0,
       ));
       await loadDebts();
     } catch (e) {
@@ -252,7 +249,11 @@ class DebtProvider extends ChangeNotifier {
         remainingAmount: 0,
         isSettled: true,
       ));
-      await NotificationService.cancelDebtReminder(debt.id!);
+      try {
+        await NotificationService.cancelDebtReminder(debt.id!);
+      } catch (_) {
+        // Notification failures must not block business operations.
+      }
       await loadDebts();
     } catch (e) {
       _setError('Erreur règlement dette: $e');

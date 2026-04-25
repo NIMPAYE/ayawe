@@ -1,5 +1,44 @@
 // Données agrégées pour l’écran Statistiques (cash flow, catégories, tendances).
 
+/// Totaux revenus / dépenses pour un mois et une devise (filtrage côté agrégateur).
+class MonthSummaryTotals {
+  final double income;
+  final double expense;
+
+  const MonthSummaryTotals({
+    required this.income,
+    required this.expense,
+  });
+
+  double get net => income - expense;
+}
+
+/// Un jour du mois avec cumuls revenus et dépenses (transferts exclus).
+class DailyCashPoint {
+  final DateTime day;
+  final double income;
+  final double expense;
+
+  const DailyCashPoint({
+    required this.day,
+    required this.income,
+    required this.expense,
+  });
+}
+
+/// Part de dépense par catégorie (pour camembert + liste).
+class ExpenseCategoryBreakdown {
+  final int categoryId;
+  final String categoryName;
+  final double amount;
+
+  const ExpenseCategoryBreakdown({
+    required this.categoryId,
+    required this.categoryName,
+    required this.amount,
+  });
+}
+
 class MonthlyCashFlowPoint {
   /// Premier jour du mois (normalisé).
   final DateTime month;

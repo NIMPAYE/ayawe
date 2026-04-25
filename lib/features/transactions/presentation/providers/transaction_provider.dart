@@ -62,13 +62,15 @@ class TransactionProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> addTransaction(Transaction transaction) async {
+  Future<int?> addTransaction(Transaction transaction) async {
     try {
-      await _createTransactionUseCase(transaction);
+      final id = await _createTransactionUseCase(transaction);
       await loadTransactions();
       NotificationService.onTransactionRecorded();
+      return id;
     } catch (e) {
       _setError('Error adding transaction: $e');
+      return null;
     }
   }
 

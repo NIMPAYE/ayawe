@@ -582,6 +582,7 @@ class _QuickActions extends StatelessWidget {
           icon: Icons.add_rounded,
           label: 'Compte',
           onTap: () => Navigator.pushNamed(context, '/add_account'),
+          isProtected: false,
         ),
         _QuickActionItem(
           icon: Icons.swap_horiz_rounded,
@@ -619,20 +620,56 @@ class _QuickActionItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool isProtected;
 
   const _QuickActionItem({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.isProtected = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final ext = context.appTheme;
     final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        final accounts = context.read<AccountProvider>().accounts;
+        if (isProtected && accounts.isEmpty) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Veuillez d\'abord enregistrer un compte pour continuer.',
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: theme.colorScheme.primary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'AJOUTER',
+                textColor: Colors.white,
+                onPressed: () => Navigator.pushNamed(context, '/add_account'),
+              ),
+            ),
+          );
+          return;
+        }
+        onTap();
+      },
       child: Column(
         children: [
           Container(

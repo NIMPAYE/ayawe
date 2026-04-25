@@ -1,3 +1,4 @@
+import '../../accounts/domain/entities/account.dart';
 import '../../categories/domain/entities/category.dart';
 import '../../transactions/domain/entities/transaction.dart';
 import 'stats_models.dart';
@@ -187,5 +188,149 @@ class StatsAggregator {
     return categories
         .where((c) => c.type == CategoryType.EXPENSE && c.id != null)
         .toList();
+  }
+
+  static Map<int, Currency> _accountIdToCurrency(List<Account> accounts) {
+    final map = <int, Currency>{};
+    for (final a in accounts) {
+      final id = a.id;
+      if (id != null) map[id] = a.currency;
+    }
+    return map;
+  }
+
+  static bool _matchesCurrency(
+    Transaction t,
+    Map<int, Currency> accountCurrency,
+    Currency currency,
+  ) {
+    return accountCurrency[t.accountId] == currency;
+  }
+
+  /// Jours calendaires du mois de [monthReference] (1er … dernier).
+  static List<DateTime> daysInMonth(DateTime monthReference) {
+    final start = startOfMonth(monthReference);
+    final end = addMonths(start, 1);
+    final days = <DateTime>[];
+    for (var d = start; d.isBefore(end); d = d.add(const Duration(days: 1))) {
+      days.add(d);
+    }
+    return days;
+  }
+
+  /// Revenus et dépenses du mois (hors transferts), comptes [currency] uniquement.
+  static MonthSummaryTotals monthSummaryForCurrency(
+    List<Transaction> transactions,
+    List<Account> accounts,
+    Currency currency,
+    DateTime monthReference,
+  ) {
+    final accCur = _accountIdToCurrency(accounts);
+    final monthStart = startOfMonth(monthReference);
+    final monthEnd = addMonths(monthStart, 1);
+    var income = 0.0;
+    var expense = 0.0;
+
+    for (final t in transactions) {
+      if (t.transactionType == TransactionType.TRANSFER) continue;
+      if (!_matchesCurrency(t, accCur, currency)) continue;
+      final day = startOfDay(t.date);
+      if (!_inMonthRange(day, monthStart, monthEnd)) continue;
+      switch (t.transactionType) {
+        case TransactionType.INCOMING:
+          income += t.amount;
+          break;
+        case TransactionType.OUTGOING:
+          expense += t.amount;
+          break;
+        case TransactionType.TRANSFER:
+          break;
+      }
+    }
+    return MonthSummaryTotals(income: income, expense: expense);
+  }
+
+  /// Une entrée par jour du mois (0 si aucune opération ce jour-là).
+  static List<DailyCashPoint> dailySeriesForMonthCurrency(
+    List<Transaction> transactions,
+    List<Account> accounts,
+    Currency currency,
+    DateTime monthReference,
+  ) {
+    final accCur = _accountIdToCurrency(accounts);
+    final monthStart = startOfMonth(monthReference);
+    final monthEnd = addMonths(monthStart, 1);
+    final days = daysInMonth(monthReference);
+    final incomeByDay = <int, double>{};
+    final expenseByDay = <int, double>{};
+
+    for (final t in transactions) {
+      if (t.transactionType == TransactionType.TRANSFER) continue;
+      if (!_matchesCurrency(t, accCur, currency)) continue;
+      final day = startOfDay(t.date);
+      if (!_inMonthRange(day, monthStart, monthEnd)) continue;
+      final key = day.millisecondsSinceEpoch;
+      switch (t.transactionType) {
+        case TransactionType.INCOMING:
+          incomeByDay[key] = (incomeByDay[key] ?? 0) + t.amount;
+          break;
+        case TransactionType.OUTGOING:
+          expenseByDay[key] = (expenseByDay[key] ?? 0) + t.amount;
+          break;
+        case TransactionType.TRANSFER:
+          break;
+      }
+    }
+
+    return days
+        .map(
+          (d) => DailyCashPoint(
+            day: d,
+            income: incomeByDay[d.millisecondsSinceEpoch] ?? 0,
+            expense: expenseByDay[d.millisecondsSinceEpoch] ?? 0,
+          ),
+        )
+        .toList();
+  }
+
+  /// Dépenses OUTGOING par catégorie dépense, tri décroissant par montant.
+  static List<ExpenseCategoryBreakdown> expenseBreakdownMonthCurrency(
+    List<Transaction> transactions,
+    List<Account> accounts,
+    List<Category> categories,
+    Currency currency,
+    DateTime monthReference,
+  ) {
+    final accCur = _accountIdToCurrency(accounts);
+    final monthStart = startOfMonth(monthReference);
+    final monthEnd = addMonths(monthStart, 1);
+    final expenseCats = expenseCategoriesOnly(categories);
+    final nameById = <int, String>{
+      for (final c in expenseCats)
+        if (c.id != null) c.id!: c.name,
+    };
+    final totals = <int, double>{};
+
+    for (final t in transactions) {
+      if (t.transactionType != TransactionType.OUTGOING) continue;
+      if (!_matchesCurrency(t, accCur, currency)) continue;
+      final day = startOfDay(t.date);
+      if (!_inMonthRange(day, monthStart, monthEnd)) continue;
+      final id = t.categoryId;
+      if (!nameById.containsKey(id)) continue;
+      totals[id] = (totals[id] ?? 0) + t.amount;
+    }
+
+    final list = totals.entries
+        .map(
+          (e) => ExpenseCategoryBreakdown(
+            categoryId: e.key,
+            categoryName: nameById[e.key] ?? '—',
+            amount: e.value,
+          ),
+        )
+        .toList();
+    list.sort((a, b) => b.amount.compareTo(a.amount));
+    return list;
   }
 }

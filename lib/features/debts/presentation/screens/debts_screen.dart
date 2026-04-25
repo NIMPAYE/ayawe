@@ -1035,7 +1035,9 @@ class _DebtDetailSheetState extends State<_DebtDetailSheet> {
       ),
     );
     if (result == true && mounted) {
-      await context.read<DebtProvider>().deleteDebt(debt.id!);
+      await context
+          .read<DebtProvider>()
+          .deleteDebt(debt.id!, mainProvider: context.read<MainProvider>());
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1728,6 +1730,16 @@ class _DebtFormSheetState extends State<_DebtFormSheet> {
     }
 
     // New debt
+    final categoryProvider = context.read<CategoryProvider>();
+    if (categoryProvider.isLoading || categoryProvider.categories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Catégories non chargées. Réessayez dans un instant.'),
+        ),
+      );
+      return;
+    }
+
     if (_selectedAccount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Veuillez sélectionner un compte')),
@@ -1748,26 +1760,38 @@ class _DebtFormSheetState extends State<_DebtFormSheet> {
 
     setState(() => _isSaving = true);
 
-    final categories = context.read<CategoryProvider>().categories;
+    final categories = categoryProvider.categories;
     int categoryId;
     if (_type == DebtType.LENT) {
-      categoryId = categories
-              .where((c) => c.name == 'Prêt accordé')
-              .firstOrNull
-              ?.id ??
-          categories
-              .where((c) => c.type == CategoryType.EXPENSE)
-              .first
-              .id!;
+      final fromName =
+          categories.where((c) => c.name == 'Prêt accordé').firstOrNull?.id;
+      final fromType = categories
+          .where((c) => c.type == CategoryType.EXPENSE)
+          .firstOrNull
+          ?.id;
+      final picked = fromName ?? fromType;
+      if (picked == null) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Aucune catégorie de dépense trouvée.')),
+        );
+        return;
+      }
+      categoryId = picked;
     } else {
-      categoryId = categories
-              .where((c) => c.name == 'Other Income')
-              .firstOrNull
-              ?.id ??
-          categories
-              .where((c) => c.type == CategoryType.INCOME)
-              .first
-              .id!;
+      final fromName =
+          categories.where((c) => c.name == 'Other Income').firstOrNull?.id;
+      final fromType =
+          categories.where((c) => c.type == CategoryType.INCOME).firstOrNull?.id;
+      final picked = fromName ?? fromType;
+      if (picked == null) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Aucune catégorie de revenu trouvée.')),
+        );
+        return;
+      }
+      categoryId = picked;
     }
 
     final success = await context.read<DebtProvider>().addDebt(

@@ -231,11 +231,43 @@ class _DayDetailList extends StatelessWidget {
     this.selectedDay,
   });
 
+  (double, double) _dayIncomeExpenseTotals() {
+    var income = 0.0;
+    var expense = 0.0;
+    for (final t in transactions) {
+      switch (t.transactionType) {
+        case TransactionType.INCOMING:
+          income += t.amount;
+          break;
+        case TransactionType.OUTGOING:
+          expense += t.amount;
+          break;
+        case TransactionType.TRANSFER:
+          break;
+      }
+    }
+    for (final r in recurringItems) {
+      switch (r.transactionType) {
+        case TransactionType.INCOMING:
+          income += r.amount;
+          break;
+        case TransactionType.OUTGOING:
+          expense += r.amount;
+          break;
+        case TransactionType.TRANSFER:
+          break;
+      }
+    }
+    return (income, expense);
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ext = context.appTheme;
     final isDark = theme.brightness == Brightness.dark;
+    final totals = _dayIncomeExpenseTotals();
 
     if (transactions.isEmpty && recurringItems.isEmpty) {
       return Center(
@@ -243,6 +275,14 @@ class _DayDetailList extends StatelessWidget {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  _DayDateWithTotalsRow(
+                    selectedDay: selectedDay!,
+                    income: totals.$1,
+                    expense: totals.$2,
+                    theme: theme,
+                    ext: ext,
+                  ),
+                  const SizedBox(height: 16),
                   Icon(
                     Icons.event_note_rounded,
                     size: 40,
@@ -266,11 +306,12 @@ class _DayDetailList extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
       children: [
         if (selectedDay != null) ...[
-          Text(
-            DateFormat('EEEE dd MMMM', 'fr').format(selectedDay!),
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+          _DayDateWithTotalsRow(
+            selectedDay: selectedDay!,
+            income: totals.$1,
+            expense: totals.$2,
+            theme: theme,
+            ext: ext,
           ),
           const SizedBox(height: 10),
         ],
@@ -404,6 +445,90 @@ class _DayDetailList extends StatelessWidget {
             ),
           );
         }),
+      ],
+    );
+  }
+}
+
+class _DayDateWithTotalsRow extends StatelessWidget {
+  const _DayDateWithTotalsRow({
+    required this.selectedDay,
+    required this.income,
+    required this.expense,
+    required this.theme,
+    required this.ext,
+  });
+
+  final DateTime selectedDay;
+  final double income;
+  final double expense;
+  final ThemeData theme;
+  final AppThemeExtension ext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            DateFormat('EEEE dd MMMM', 'fr').format(selectedDay),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '+',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: ext.income,
+                    ),
+                  ),
+                  TextSpan(
+                    text: _fmt(income),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: ext.income,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '-',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: ext.expense,
+                    ),
+                  ),
+                  TextSpan(
+                    text: _fmt(expense),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: ext.expense,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
