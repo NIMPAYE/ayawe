@@ -268,7 +268,7 @@ abstract final class AppTheme {
   static ThemeData get dark {
     final colorScheme = ColorScheme.dark(
       primary: AppColors.primaryLight,
-      onPrimary: Colors.white,
+      onPrimary: AppColors.primary,
       primaryContainer: AppColors.primarySurfaceDark,
       onPrimaryContainer: AppColors.primaryLight,
       secondary: AppColors.primary,
@@ -315,8 +315,8 @@ abstract final class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.primaryLight,
+          foregroundColor: AppColors.primary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
@@ -361,8 +361,8 @@ abstract final class AppTheme {
       ),
 
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primaryLight,
+        foregroundColor: AppColors.primary,
         elevation: 4,
       ),
 
